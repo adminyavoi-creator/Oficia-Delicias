@@ -79,7 +79,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Publicación de conexión Supabase | GitHub recibió los cambios de backend y Vercel mostró una implementación `Ready` desde `main`; incluye catálogo, acceso por correo y reservas en Supabase. |
 | 14 oct 2026 | Código Google Auth | Selector nativo de Google para Android y OAuth web, ambos con Supabase Auth. Web y Android compilaron; el botón se mantiene oculto hasta configurar el cliente web. Proveedor aún desactivado por falta de credenciales OAuth. |
 | 14 oct 2026 | Google Auth Platform y cliente web | App Oficia registrada como externa; el usuario aceptó la Política de Datos del Usuario y confirmó crear el cliente web. Google muestra el acceso limitado a usuarios de prueba. Rotar el secreto desde Google Cloud antes de configurarlo en Supabase. Huella SHA-1 de desarrollo identificada. |
-| 14 oct 2026 | Clientes OAuth y preparación de proveedor | Se creó el cliente Android de desarrollo tras confirmación del usuario. Supabase tiene cargados los IDs públicos web y Android en el formulario Google; el secreto permanece enmascarado y el formulario sin guardar para que el usuario pegue el secreto recién rotado y habilite el proveedor. `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` está en Vercel Production y `.env.local`; hace falta un nuevo despliegue después de publicar los cambios. |
+| 14 oct 2026 | Clientes OAuth y preparación de proveedor | Se creó el cliente Android de desarrollo tras confirmación del usuario. Supabase tiene cargados los IDs públicos web y Android en el formulario Google; el secreto permanece enmascarado y el formulario sin guardar para que el usuario pegue el secreto recién rotado y habilite el proveedor. `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` está en Vercel Production y `.env.local`; el commit `a256788` aparece Ready en producción. |
+| 14 oct 2026 | Publicación de Google Auth | Commit `a256788` publicado en `main`; Vercel confirmó despliegue de producción Ready. `npm run typecheck`, `npm run build:web` y `npx expo export --platform android` pasaron. |
 | 14 oct 2026 | Cuenta anfitriona | Supabase no encontró `admin.yavoi@gmail.com` en `auth.users`; queda pendiente registrarse en Oficia y después asociar la cuenta a los espacios de muestra. |
 
 ## Correspondencia con los mockups
@@ -100,7 +101,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 ## Próximo paso concreto
 
 1. En la pestaña Supabase abierta, reemplazar el secreto antiguo por el nuevo del portapapeles, activar «Enable Sign in with Google» y guardar. El formulario ya incluye ambos IDs públicos; no activar «Skip nonce checks».
-2. Publicar los cambios de acceso Google en `main` y dejar que Vercel compile la versión con `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
+2. Probar inicio de sesión web y Android después de guardar el proveedor; el código ya está en producción con `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
 3. Agregar usuarios de prueba en Google Auth Platform para la audiencia externa; crear una compilación Android de desarrollo y comprobar inicio de sesión web/nativo con la misma cuenta. Agregar la huella de firma de publicación/EAS cuando exista.
 4. Crear la cuenta anfitriona con Google o correo y vincularla a los espacios de muestra; probar cliente y anfitrión con cuentas distintas, RLS y horarios coincidentes.
 5. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar migraciones con la CLI; recibir inventario real y preparar Play Console.
