@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** la app conecta el catálogo, el acceso por correo y las solicitudes a Supabase con RLS. Se encontró una falla en la carga web con una sesión nueva: `expo-video` intentaba usar `SharedObject` antes de que se inicializara el núcleo de Expo y dejaba la página en blanco. La corrección agrega explícitamente `expo-modules-core` antes de `expo-video`; las comprobaciones locales pasan. Falta publicar y verificar el login en producción con una sesión limpia. Perfil ofrece cerrar sesión. Google Auth está habilitado y el acceso web ya se probó con una cuenta autorizada; la app Android tiene `expo-dev-client` y perfiles EAS para desarrollo, prueba y producción. Falta generar la APK nativa y registrar su firma de publicación en Google Cloud. La cuenta anfitriona ya existe y está vinculada a los cuatro espacios de muestra. El inventario continúa siendo demostrativo.
+**Estado actual (14 de octubre de 2026):** la app conecta el catálogo, el acceso por correo y las solicitudes a Supabase con RLS. Se corrigió la carga en sesiones web nuevas importando el módulo raíz de Expo antes de `expo-video`, para inicializar `SharedObject`. `npm run typecheck` y `npm run build:web` pasan. El commit `3d06d93` está en `main`; Vercel reportó la implementación exitosa y se comprobó que `oficia-delicias.vercel.app` muestra el login en una sesión limpia. Perfil ofrece cerrar sesión. Google Auth está habilitado y el acceso web se probó con una cuenta autorizada; la app Android tiene `expo-dev-client` y perfiles EAS para desarrollo, prueba y producción. Falta generar la APK nativa y registrar su firma de publicación en Google Cloud. La cuenta anfitriona ya existe y está vinculada a los cuatro espacios de muestra. El inventario continúa siendo demostrativo.
 
 ## Objetivo
 
@@ -26,9 +26,9 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | --- | --- | --- |
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
 | Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | Cuenta anfitriona creada y asociada a los espacios de muestra; falta probar el flujo con una segunda cuenta cliente y validar políticas RLS |
-| Pantalla inicial de acceso y cierre de sesión | En curso | Login de Oficia y salida desde Perfil implementados; publicar y comprobar la carga del login en una sesión web limpia |
+| Pantalla inicial de acceso y cierre de sesión | Completada | Login de Oficia y salida desde Perfil implementados; verificado en una sesión web limpia en producción |
 | Acceso con Google en web y Android | En curso | Proveedor habilitado; acceso web verificado. El botón aparece cuando Supabase está configurado. Perfil EAS listo; falta sesión EAS para generar la APK y registrar su SHA-1 |
-| Proyecto Vercel y frontend web | En curso | `oficia-delicias.vercel.app`; corregir y verificar el arranque del frontend en una sesión web limpia |
+| Proyecto Vercel y frontend web | Completada | `oficia-delicias.vercel.app`; implementación exitosa y login verificado en una sesión web limpia |
 | Disponibilidad, horarios y confirmación real del anfitrión | Pendiente | Reglas de operación y calendario |
 | Pagos, cancelaciones y facturación | Pendiente | Proveedor de pagos y políticas comerciales |
 | Mapas y ubicación | Pendiente | Direcciones reales y proveedor de mapas |
@@ -95,7 +95,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Preparación de compilación Android nativa | Se instaló `expo-dev-client` compatible con Expo SDK 54 y se añadió `eas.json` con APK de desarrollo/prueba y AAB de producción; los perfiles incluyen las variables públicas requeridas por la app. La exportación Android no genera una APK. `npx eas-cli whoami` confirmó que no hay sesión EAS en este equipo y no hay JDK/Android SDK local; proyecto EAS, APK y su SHA-1 siguen pendientes. |
 | 14 oct 2026 | Fondo de video en el acceso | El video proporcionado se integró como fondo a pantalla completa y silencioso, en bucle, con recorte adaptable y velo ciruela translúcido. El logo, la propuesta de valor y la tarjeta de acceso conservan contraste. `expo-video` permite el mismo fondo en Android y web; tipos y ambas exportaciones pasan. Commit `3e55e9c` integrado en `main`; Vercel confirmó producción `Ready`. Falta probar la reproducción en una APK instalada. La auditoría npm reporta 39 avisos; se deja su revisión como paso previo a Play Store para evitar actualizaciones mayores automáticas sobre Expo SDK 54. |
 
-| 14 oct 2026 | Diagnóstico del login web en blanco | En una sesión nueva se reprodujo una excepción de `expo-video`: `Cannot read properties of undefined (reading 'SharedObject')`. La dependencia de `expo-modules-core` se inicializa explícitamente antes del reproductor; `npm run typecheck` y `npm run build:web` pasan. Pendientes publicación y verificación del login en producción. |
+| 14 oct 2026 | Corrección del login web en blanco | La sesión limpia reproducía `Cannot read properties of undefined (reading 'SharedObject')` al cargar `expo-video`. Se importó `expo` antes del reproductor para inicializar el núcleo. Tipos y exportación web pasan. Commit `3d06d93` publicado en `main`; Vercel reportó éxito y se confirmó el login con Google, correo y contraseña en producción. |
 
 ## Correspondencia con los mockups
 
@@ -114,10 +114,9 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Publicar la corrección del login web y comprobar la pantalla de acceso en una sesión limpia; luego marcar esta tarea como completada.
-2. Probar cliente y anfitrión con cuentas distintas, enviar una solicitud de prueba controlada y validar las políticas RLS y el cambio de estado desde el panel.
-3. Iniciar sesión en Expo/EAS en este equipo con `npx eas-cli login`; después generar la APK Android de desarrollo, probar Google nativo y registrar la SHA-1 de EAS en Google Cloud.
-4. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar migraciones con la CLI; recibir inventario real y preparar Play Console.
+1. Probar cliente y anfitrión con cuentas distintas, enviar una solicitud de prueba controlada y validar las políticas RLS y el cambio de estado desde el panel.
+2. Iniciar sesión en Expo/EAS en este equipo con `npx eas-cli login`; después generar la APK Android de desarrollo, probar Google nativo y registrar la SHA-1 de EAS en Google Cloud.
+3. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar migraciones con la CLI; recibir inventario real y preparar Play Console.
 
 ## Fase final · Portal profesional de administración de Oficia
 
