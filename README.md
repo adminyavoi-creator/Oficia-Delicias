@@ -6,9 +6,12 @@ Prototipo de app móvil Android en español, desarrollado con Expo y React Nativ
 
 1. Instala Node.js 20 o superior.
 2. En esta carpeta, ejecuta `npm install`.
-3. Ejecuta `npm run android` con un emulador Android o con Expo Go en tu teléfono.
-4. Para revisar tipos, ejecuta `npm run typecheck`.
+3. Copia `.env.example` como `.env.local` y configura la URL de Supabase y la clave publicable del proyecto.
+4. Ejecuta `npm run android` con un emulador Android o con Expo Go en tu teléfono.
+5. Para revisar tipos, ejecuta `npm run typecheck`.
 
-La interfaz usa imágenes remotas de Unsplash y requiere conexión para mostrarlas. Si fallan, aparece un marcador local. El contenido, los precios, las valoraciones y las solicitudes de reserva son demostrativos; los favoritos y las solicitudes se guardan en el dispositivo y no generan cobros. El panel de anfitrión se abre desde Perfil y muestra solo solicitudes locales de muestra; todavía no conecta varios usuarios.
+Con Supabase configurado, Oficia carga el catálogo publicado, permite crear cuentas o iniciar sesión por correo y guarda solicitudes con la cuenta autenticada. El precio y la duración se calculan en la base de datos; el cliente no puede aprobar sus propias solicitudes. El panel muestra y responde únicamente solicitudes de espacios vinculados al anfitrión mediante `spaces.host_id`. No se hacen cobros. Si Supabase no está configurado, la app conserva el modo de demostración local.
 
-Consulta `PLAN_DE_DESARROLLO.md` para el estado exacto y el próximo paso, `identidad.md` para la marca elegida y `ARQUITECTURA_BACKEND.md` para la conexión futura del panel interno.
+Los cuatro espacios actuales son demostrativos; las fotos, ubicaciones, tarifas y opiniones no son inventario real. Para usar el panel, la cuenta anfitriona debe ser asociada a uno o más espacios desde la administración. Las reservas del usuario se guardan en Supabase y RLS limita la lectura a solicitudes propias o de espacios administrados por su cuenta.
+
+Consulta `PLAN_DE_DESARROLLO.md` para el estado exacto y el próximo paso, `identidad.md` para la marca elegida y `ARQUITECTURA_BACKEND.md` para las reglas de datos y acceso.
