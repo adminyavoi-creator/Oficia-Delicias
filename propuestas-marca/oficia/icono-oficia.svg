@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Ícono de Oficia">
+  <rect width="512" height="512" rx="140" fill="#D35E69"/>
+  <path d="M132 348V229c0-75 55-130 124-130s124 55 124 130v119" fill="none" stroke="#FFFFFF" stroke-width="30" stroke-linecap="round"/>
+  <path d="M188 290h136M202 290v72M310 290v72" fill="none" stroke="#FFFFFF" stroke-width="27" stroke-linecap="round"/>
+  <path d="M256 148v65l45 25" fill="none" stroke="#FFFFFF" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="213" r="13" fill="#FFE7E9"/>
+</svg>

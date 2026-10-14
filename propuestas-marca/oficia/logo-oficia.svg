@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="180" viewBox="0 0 720 180" role="img" aria-label="Oficia, tu espacio a tu hora">
+  <rect width="720" height="180" rx="28" fill="#FFFFFF"/>
+  <g transform="translate(22 22)">
+    <rect width="136" height="136" rx="38" fill="#D35E69"/>
+    <path d="M35 93V61c0-20 15-35 33-35s33 15 33 35v32" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M50 78h36M54 78v19M82 78v19" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+    <path d="M68 39v18l12 7" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="68" cy="57" r="3.5" fill="#FFE7E9"/>
+  </g>
+  <text x="185" y="104" font-family="Arial, Helvetica, sans-serif" font-size="78" font-weight="800" letter-spacing="-4" fill="#512D37">Oficia</text>
+  <text x="190" y="136" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="1.7" fill="#D35E69">TU ESPACIO, A TU HORA.</text>
+</svg>

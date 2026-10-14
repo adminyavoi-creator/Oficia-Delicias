@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="130" viewBox="0 0 620 130" role="img" aria-label="Logotipo NodoWork">
+<rect width="620" height="130" rx="22" fill="white"/>
+<g transform="translate(16 18)"><path d="M26 28l39 36M65 28L26 64" stroke="#138C8D" stroke-width="9" stroke-linecap="round"/><circle cx="24" cy="26" r="11" fill="#138C8D"/><circle cx="68" cy="26" r="11" fill="#138C8D"/><circle cx="24" cy="66" r="11" fill="#138C8D"/><circle cx="68" cy="66" r="11" fill="#138C8D"/><circle cx="46" cy="46" r="9" fill="#D9F4F1"/></g>
+<text x="123" y="75" font-family="Arial, Helvetica, sans-serif" font-size="45" font-weight="800" letter-spacing="-1.5" fill="#173E42">NodoWork</text>
+<text x="125" y="99" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" letter-spacing="2.8" fill="#138C8D">DELICIAS · CHIHUAHUA</text>
+</svg>

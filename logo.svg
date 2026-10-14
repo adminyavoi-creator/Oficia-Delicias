@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="170" viewBox="0 0 620 170" role="img" aria-label="Nido Work Delicias">
+  <rect x="10" y="12" width="144" height="144" rx="42" fill="#16A675"/>
+  <path d="M43 105V71L82 42l39 29v34" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M59 110V78l23 26 23-26v32" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="180" y="99" font-family="Arial, Helvetica, sans-serif" font-size="68" font-weight="800" letter-spacing="-5" fill="#103F37">nido</text>
+  <text x="303" y="99" font-family="Arial, Helvetica, sans-serif" font-size="68" font-weight="800" letter-spacing="-5" fill="#16A675">work</text>
+  <text x="185" y="131" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="12" fill="#73817D">DELICIAS</text>
+</svg>

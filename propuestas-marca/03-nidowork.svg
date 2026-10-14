@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="130" viewBox="0 0 620 130" role="img" aria-label="Logotipo NidoWork">
+<rect width="620" height="130" rx="22" fill="white"/>
+<g transform="translate(16 18)"><rect x="10" y="10" width="72" height="72" rx="24" fill="#16A675"/><path d="M25 49l21-18 21 18v21H25z" fill="none" stroke="white" stroke-width="6" stroke-linejoin="round"/><path d="M36 70V50l10 10 10-10v20" fill="none" stroke="white" stroke-width="5" stroke-linejoin="round"/></g>
+<text x="123" y="75" font-family="Arial, Helvetica, sans-serif" font-size="45" font-weight="800" letter-spacing="-1.5" fill="#103F37">NidoWork</text>
+<text x="125" y="99" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" letter-spacing="2.8" fill="#16A675">DELICIAS · CHIHUAHUA</text>
+</svg>

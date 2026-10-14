@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Oficia · Propuesta de identidad</title>
+  <style>
+    :root { --coral:#D35E69; --accion:#B54753; --ciruela:#512D37; --rosa:#FFE7E9; --marfil:#FFF9F8; --gris:#806F73; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--marfil); color:var(--ciruela); font-family:Arial,Helvetica,sans-serif; }
+    header { background:var(--ciruela); color:white; padding:54px max(24px,calc((100vw - 1100px)/2)) 58px; }
+    .eyebrow { font-size:12px; letter-spacing:2px; font-weight:800; color:#FFC9CD; }
+    h1 { font-size:clamp(40px,6vw,68px); letter-spacing:-3px; margin:15px 0 8px; }
+    header p { color:#F1DADD; font-size:17px; line-height:1.5; max-width:600px; }
+    main { max-width:1100px; margin:auto; padding:32px 20px 70px; }
+    h2 { font-size:25px; letter-spacing:-1px; margin:0 0 20px; }
+    .grid { display:grid; grid-template-columns:1.2fr .8fr; gap:20px; }
+    .panel { background:white; border:1px solid #F2E5E6; border-radius:25px; padding:22px; box-shadow:0 8px 35px #512d3710; }
+    .panel.dark { background:var(--ciruela); border-color:var(--ciruela); }
+    .logo { width:100%; display:block; border-radius:16px; }
+    .label { color:var(--gris); font-size:11px; font-weight:800; letter-spacing:1.5px; margin:0 0 12px; }
+    .dark .label { color:#EABCC1; }
+    .iconPanel { display:flex; align-items:center; gap:24px; }
+    .icon { width:150px; height:150px; border-radius:35px; box-shadow:0 12px 30px #D35E6930; }
+    .iconPanel strong { display:block; font-size:20px; margin-bottom:8px; }
+    .iconPanel p { color:var(--gris); line-height:1.55; font-size:13px; margin:0; }
+    .palette { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin:30px 0 42px; }
+    .swatch { border-radius:15px; overflow:hidden; background:white; border:1px solid #EEDFE1; }
+    .swatch div { height:80px; }
+    .swatch p { padding:12px; margin:0; font-size:12px; font-weight:800; }
+    .swatch code { display:block; color:var(--gris); margin-top:5px; font-size:11px; }
+    .concept { display:grid; grid-template-columns:1fr 340px; gap:34px; align-items:center; margin-top:20px; }
+    .concept p { line-height:1.7; color:#6C5A5E; }
+    .ideaList { display:grid; gap:13px; padding:0; margin:22px 0 0; }
+    .ideaList li { list-style:none; display:flex; gap:10px; align-items:center; font-size:14px; font-weight:700; }
+    .ideaList span { display:grid; place-items:center; width:27px; height:27px; border-radius:50%; background:var(--rosa); color:var(--coral); }
+    .phone { background:white; border:8px solid #2D2427; border-radius:38px; width:300px; min-height:525px; margin:auto; box-shadow:0 22px 55px #512d3727; overflow:hidden; }
+    .phoneTop { background:var(--accion); padding:23px 18px 25px; color:white; }
+    .phoneBrand { font-size:22px; font-weight:900; letter-spacing:-1px; }
+    .phoneSmall { font-size:10px; letter-spacing:1px; opacity:.85; font-weight:700; }
+    .phoneTop h3 { font-size:24px; line-height:1.12; margin:24px 0 4px; letter-spacing:-1px; }
+    .phoneTop p { font-size:12px; margin:0; opacity:.9; }
+    .search { padding:12px; border-radius:10px; background:white; color:#9B8A8E; margin-top:20px; font-size:12px; }
+    .phoneContent { padding:17px; }
+    .pills { display:flex; gap:6px; margin-bottom:17px; }
+    .pills span { background:var(--rosa); color:var(--ciruela); border-radius:20px; padding:7px 9px; font-size:10px; font-weight:700; white-space:nowrap; }
+    .pills span:first-child { background:var(--accion); color:white; }
+    .phoneContent h4 { margin:0 0 11px; font-size:15px; }
+    .space { border:1px solid #F1E7E7; border-radius:15px; overflow:hidden; }
+    .spacePhoto { height:130px; background:linear-gradient(150deg,#EFE5DA,#C7AF9C); position:relative; }
+    .spacePhoto:before { content:""; position:absolute; width:150px; height:80px; left:70px; bottom:22px; background:#EAE5DD; border-radius:4px; box-shadow:0 8px 0 #6D6661; transform:skew(-13deg); }
+    .spacePhoto:after { content:""; position:absolute; left:20px; bottom:15px; width:38px; height:50px; background:#795D50; border-radius:18px 18px 4px 4px; box-shadow:190px 0 0 #795D50; }
+    .spaceInfo { padding:11px; display:flex; justify-content:space-between; }
+    .spaceInfo strong { font-size:13px; }
+    .spaceInfo small { display:block; color:#8B7D80; margin-top:4px; }
+    .spaceInfo b { color:var(--accion); font-size:12px; white-space:nowrap; }
+    .note { color:var(--gris); font-size:12px; line-height:1.6; margin-top:30px; }
+    @media(max-width:760px){ .grid,.concept{grid-template-columns:1fr}.palette{grid-template-columns:repeat(2,1fr)}.iconPanel{flex-direction:column;align-items:flex-start}header{padding:42px 22px}.phone{margin-top:15px} }
+  </style>
+</head>
+<body>
+  <header><div class="eyebrow">PROPUESTA DE MARCA · DELICIAS, CHIHUAHUA</div><h1>Oficia.</h1><p>Tu espacio, a tu hora. Oficinas, salas y lugares de trabajo listos para reservar.</p></header>
+  <main>
+    <div class="grid">
+      <section class="panel"><p class="label">LOGOTIPO PRINCIPAL</p><img class="logo" src="logo-oficia-final.svg" alt="Logotipo Oficia sobre fondo claro"></section>
+      <section class="panel dark"><p class="label">VERSIÓN OSCURA</p><img class="logo" src="logo-oficia-final-oscuro.svg" alt="Logotipo Oficia sobre fondo oscuro"></section>
+      <section class="panel iconPanel"><img class="icon" src="icono-oficia-final.svg" alt="Ícono de app de Oficia"><div><strong>Ícono de la app</strong><p>El plano ampliado representa salas de trabajo; el círculo destaca una oficina disponible.</p></div></section>
+      <section class="panel"><p class="label">FRASE DE MARCA</p><h2 style="margin:15px 0 8px;color:var(--coral)">Tu espacio,<br>a tu hora.</h2><p style="color:var(--gris);font-size:14px;line-height:1.5">Una promesa breve para reservar por horas, días o semanas.</p></section>
+    </div>
+    <h2 style="margin-top:42px">Colorimetría</h2>
+    <div class="palette"><div class="swatch"><div style="background:#D35E69"></div><p>Coral<code>#D35E69</code></p></div><div class="swatch"><div style="background:#B54753"></div><p>Coral profundo<code>#B54753</code></p></div><div class="swatch"><div style="background:#512D37"></div><p>Ciruela<code>#512D37</code></p></div><div class="swatch"><div style="background:#FFE7E9"></div><p>Rosa claro<code>#FFE7E9</code></p></div><div class="swatch"><div style="background:#FFF9F8"></div><p>Marfil<code>#FFF9F8</code></p></div><div class="swatch"><div style="background:#806F73"></div><p>Gris cálido<code>#806F73</code></p></div></div>
+    <div class="concept"><section><h2>El concepto</h2><p>El plano representa la variedad de oficinas, salas y espacios compartidos. El círculo ampliado destaca el lugar que encuentras y reservas. Las divisiones se ajustaron para que el símbolo se lea mejor incluso como ícono pequeño.</p><ul class="ideaList"><li><span>✓</span> Profesional y accesible</li><li><span>✓</span> Fácil de reconocer como ícono</li><li><span>✓</span> Apto para oficinas, reuniones y coworking</li></ul></section><div class="phone"><div class="phoneTop"><div class="phoneBrand">Oficia<span style="font-size:13px"> ●</span></div><div class="phoneSmall">DELICIAS, CHIHUAHUA</div><h3>Tu lugar para<br>trabajar hoy.</h3><p>Espacios listos cerca de ti.</p><div class="search">⌕ &nbsp; ¿Qué espacio necesitas?</div></div><div class="phoneContent"><div class="pills"><span>Todos</span><span>Oficinas</span><span>Salas</span><span>Coworking</span></div><h4>Espacios disponibles</h4><div class="space"><div class="spacePhoto"></div><div class="spaceInfo"><div><strong>Sala Norte</strong><small>⌖ Centro, Delicias</small></div><b>$280 / h</b></div></div></div></div></div>
+    <p class="note">Vista conceptual para elegir dirección de marca. La interfaz de la app aún no se ha cambiado a esta identidad. Antes de su uso comercial, conviene revisar disponibilidad del nombre y la marca.</p>
+  </main>
+</body>
+</html>

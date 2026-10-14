@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="130" viewBox="0 0 620 130" role="img" aria-label="Logotipo DeliWork">
+<rect width="620" height="130" rx="22" fill="white"/>
+<g transform="translate(16 18)"><rect x="12" y="13" width="68" height="68" rx="18" fill="#6F49B8"/><path d="M30 30h15c13 0 22 7 22 17S58 64 45 64H30z" fill="none" stroke="white" stroke-width="6" stroke-linejoin="round"/><path d="M34 47h31" stroke="#EFE8FF" stroke-width="5" stroke-linecap="round"/></g>
+<text x="123" y="75" font-family="Arial, Helvetica, sans-serif" font-size="45" font-weight="800" letter-spacing="-1.5" fill="#2D2150">DeliWork</text>
+<text x="125" y="99" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" letter-spacing="2.8" fill="#6F49B8">DELICIAS · CHIHUAHUA</text>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="130" viewBox="0 0 620 130" role="img" aria-label="Logotipo BaseLista">
+<rect width="620" height="130" rx="22" fill="white"/>
+<g transform="translate(16 18)"><path d="M12 59l34-42 34 42v19H12z" fill="#235A67"/><path d="M30 59h32M37 48h18" stroke="white" stroke-width="6" stroke-linecap="round"/><path d="M23 78h46" stroke="#D8F0EF" stroke-width="5" stroke-linecap="round"/></g>
+<text x="123" y="75" font-family="Arial, Helvetica, sans-serif" font-size="45" font-weight="800" letter-spacing="-1.5" fill="#15353E">BaseLista</text>
+<text x="125" y="99" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" letter-spacing="2.8" fill="#235A67">DELICIAS · CHIHUAHUA</text>
+</svg>

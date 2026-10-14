@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="130" viewBox="0 0 620 130" role="img" aria-label="Logotipo HoraWork">
+<rect width="620" height="130" rx="22" fill="white"/>
+<g transform="translate(16 18)"><circle cx="46" cy="46" r="35" fill="#D35E69"/><circle cx="46" cy="46" r="23" fill="none" stroke="white" stroke-width="5"/><path d="M46 30v18l14 9" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="123" y="75" font-family="Arial, Helvetica, sans-serif" font-size="45" font-weight="800" letter-spacing="-1.5" fill="#512D37">HoraWork</text>
+<text x="125" y="99" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" letter-spacing="2.8" fill="#D35E69">DELICIAS · CHIHUAHUA</text>
+</svg>
