@@ -84,6 +84,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Usuario de prueba OAuth | Con autorización del usuario, se agregó `admin.yavoi@gmail.com` a los usuarios de prueba del proyecto Google Auth Platform. Confirmado en la lista de audiencia. |
 | 14 oct 2026 | Cuenta anfitriona | Supabase no encontró `admin.yavoi@gmail.com` en `auth.users`; queda pendiente registrarse en Oficia y después asociar la cuenta a los espacios de muestra. |
 | 14 oct 2026 | Proveedor Google en Supabase | La pantalla de proveedores muestra «Enable Sign in with Google» activo y el botón Guardar deshabilitado, señal de que el cambio ya está guardado. No se reveló ni se leyó el secreto. Prueba de acceso pendiente. |
+| 14 oct 2026 | Plan de desarrollo y portal administrativo | Se agregó al final del plan la fase del portal profesional con módulos operativos, roles, seguridad y criterios de aceptación. Commit `0564aaa` desplegado por Vercel con estado Ready. |
 
 ## Correspondencia con los mockups
 
