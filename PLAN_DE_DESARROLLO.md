@@ -17,7 +17,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 5. Favoritos, reservas y perfil | Completada | Secciones funcionales del prototipo | Guardar favoritos y consultar solicitudes durante la sesión |
 | 6. Filtros y datos locales | Completada | Filtro por capacidad/servicios y almacenamiento en el dispositivo | Favoritos y solicitudes se recuperan al abrir la app |
 | 7. Panel de anfitrión de demostración | Completada | Vista de solicitudes y cambio de estado local | Confirmar o rechazar una solicitud en el mismo dispositivo |
-| 8. Verificación | En curso | Tipos, compilación y recorrido en dispositivo | Tipos y exportaciones web/Android correctas; vista web verificada; prueba Android nativa pendiente |
+| 8. Verificación | En curso | Tipos, compilación, revisión de dependencias y recorrido en dispositivo | Tipos y exportaciones web/Android correctas; producción Vercel lista; prueba Android nativa pendiente. `npm audit` reporta 39 avisos (15 moderados y 24 altos); revisar versiones de Expo/React Native antes de Play Store |
 | 9. Diseño de conexión real | Completada | `ARQUITECTURA_BACKEND.md` | Flujo cliente–anfitrión, datos y permisos definidos |
 
 ## Fase 2 · Antes del lanzamiento
@@ -32,7 +32,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Disponibilidad, horarios y confirmación real del anfitrión | Pendiente | Reglas de operación y calendario |
 | Pagos, cancelaciones y facturación | Pendiente | Proveedor de pagos y políticas comerciales |
 | Mapas y ubicación | Pendiente | Direcciones reales y proveedor de mapas |
-| Publicación Android | Pendiente | Cuenta de Play Console, pruebas en dispositivos y materiales legales |
+| Publicación Android | Pendiente | APK nativa, prueba en dispositivo, cuenta de Play Console, materiales legales y revisión de los avisos de dependencias antes del lanzamiento |
 
 ## Decisiones registradas
 
@@ -93,7 +93,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Pulido visual del acceso | Portada coral de Oficia con ubicación, beneficios, formulario y acceso Google; la vista web muestra el botón de Google cuando Supabase está configurado. Tipo, exportación web y paquete JS Android verificados; preview web revisado. |
 | 14 oct 2026 | Publicación y verificación del acceso | Commit `38c0bd7` integrado en `main`; Vercel confirmó producción `Ready`. Se abrió el dominio de despliegue en una sesión sin acceso previo y se verificó que muestra el login inicial con Google, correo y contraseña. |
 | 14 oct 2026 | Preparación de compilación Android nativa | Se instaló `expo-dev-client` compatible con Expo SDK 54 y se añadió `eas.json` con APK de desarrollo/prueba y AAB de producción; los perfiles incluyen las variables públicas requeridas por la app. La exportación Android no genera una APK. `npx eas-cli whoami` confirmó que no hay sesión EAS en este equipo y no hay JDK/Android SDK local; proyecto EAS, APK y su SHA-1 siguen pendientes. |
-| 14 oct 2026 | Fondo de video en el acceso | El video proporcionado se integró como fondo a pantalla completa y silencioso, en bucle, con recorte adaptable y velo ciruela translúcido. El logo, la propuesta de valor y la tarjeta de acceso conservan contraste. `expo-video` permite el mismo fondo en Android y web; tipos y ambas exportaciones pasan. Commit `3e55e9c` integrado en `main`; Vercel confirmó producción `Ready`. Falta probar la reproducción en una APK instalada. |
+| 14 oct 2026 | Fondo de video en el acceso | El video proporcionado se integró como fondo a pantalla completa y silencioso, en bucle, con recorte adaptable y velo ciruela translúcido. El logo, la propuesta de valor y la tarjeta de acceso conservan contraste. `expo-video` permite el mismo fondo en Android y web; tipos y ambas exportaciones pasan. Commit `3e55e9c` integrado en `main`; Vercel confirmó producción `Ready`. Falta probar la reproducción en una APK instalada. La auditoría npm reporta 39 avisos; se deja su revisión como paso previo a Play Store para evitar actualizaciones mayores automáticas sobre Expo SDK 54. |
 
 ## Correspondencia con los mockups
 
