@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** la app conecta el catálogo, el acceso por correo y las solicitudes a Supabase con RLS. Se corrigió la carga en sesiones web nuevas importando el módulo raíz de Expo antes de `expo-video`, para inicializar `SharedObject`. `npm run typecheck` y `npm run build:web` pasan. El commit `3d06d93` está en `main`; Vercel reportó la implementación exitosa y se comprobó que `oficia-delicias.vercel.app` muestra el login en una sesión limpia. Perfil ofrece cerrar sesión. Google Auth está habilitado y el acceso web se probó con una cuenta autorizada; la app Android tiene `expo-dev-client` y perfiles EAS para desarrollo, prueba y producción. Falta generar la APK nativa y registrar su firma de publicación en Google Cloud. La cuenta anfitriona ya existe y está vinculada a los cuatro espacios de muestra. El inventario continúa siendo demostrativo.
+**Estado actual (14 de octubre de 2026):** la app conecta el catálogo, el acceso por correo y las solicitudes a Supabase con RLS. Se corrigió la carga web en sesiones nuevas y Vercel muestra el login de Oficia. Perfil ofrece cerrar sesión; Google Auth web está probado. La revisión tecnológica comparó el prototipo Expo SDK 54 con la arquitectura Vite + Capacitor de Yavoi!: se recomienda alinear Oficia con Vite + React + Capacitor y compilar Android con Android Studio/Gradle. Expo y EAS no son requisitos; la migración aún no se ha aplicado y la app en producción permanece intacta. La cuenta anfitriona está vinculada a cuatro espacios demostrativos; el inventario real sigue pendiente.
 
 ## Objetivo
 
@@ -17,7 +17,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 5. Favoritos, reservas y perfil | Completada | Secciones funcionales del prototipo | Guardar favoritos y consultar solicitudes durante la sesión |
 | 6. Filtros y datos locales | Completada | Filtro por capacidad/servicios y almacenamiento en el dispositivo | Favoritos y solicitudes se recuperan al abrir la app |
 | 7. Panel de anfitrión de demostración | Completada | Vista de solicitudes y cambio de estado local | Confirmar o rechazar una solicitud en el mismo dispositivo |
-| 8. Verificación | En curso | Tipos, compilación, revisión de dependencias y recorrido en dispositivo | Tipos y exportaciones web/Android correctas; producción Vercel lista; prueba Android nativa pendiente. `npm audit` reporta 39 avisos (15 moderados y 24 altos); revisar versiones de Expo/React Native antes de Play Store |
+| 8. Verificación y alineación tecnológica | En curso | Migración gradual del prototipo Expo a Vite + React + Capacitor; preservar Supabase y Vercel | Login y reservas web estables; APK Capacitor probada con Google nativo y flujo de anfitrión. Revisar avisos de dependencias al cerrar la migración |
 | 9. Diseño de conexión real | Completada | `ARQUITECTURA_BACKEND.md` | Flujo cliente–anfitrión, datos y permisos definidos |
 
 ## Fase 2 · Antes del lanzamiento
@@ -27,7 +27,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
 | Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | Cuenta anfitriona creada y asociada a los espacios de muestra; falta probar el flujo con una segunda cuenta cliente y validar políticas RLS |
 | Pantalla inicial de acceso y cierre de sesión | Completada | Login de Oficia y salida desde Perfil implementados; verificado en una sesión web limpia en producción |
-| Acceso con Google en web y Android | En curso | Proveedor habilitado; acceso web verificado. El botón aparece cuando Supabase está configurado. Perfil EAS listo; falta sesión EAS para generar la APK y registrar su SHA-1 |
+| Acceso con Google en web y Android | En curso | Proveedor habilitado y acceso web verificado. Migrar el selector Android actual a un puente compatible con Capacitor y registrar/verificar la huella de firma final |
 | Proyecto Vercel y frontend web | Completada | `oficia-delicias.vercel.app`; implementación exitosa y login verificado en una sesión web limpia |
 | Disponibilidad, horarios y confirmación real del anfitrión | Pendiente | Reglas de operación y calendario |
 | Pagos, cancelaciones y facturación | Pendiente | Proveedor de pagos y políticas comerciales |
@@ -46,7 +46,9 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 - La cuenta anfitriona se creó con Google y se asignó a los cuatro espacios demostrativos; el acceso al panel se basa en la relación `spaces.host_id` bajo RLS.
 - Google Auth usa el proveedor de **Supabase Auth** en web y Android. Android usa el selector nativo de Google y entrega el token de identidad a Supabase; la web inicia OAuth con el mismo proveedor. Ambos caminos comparten usuario y RLS.
 - Google Auth Platform está configurada para Oficia como aplicación externa y usa Supabase Auth para web y Android. Los orígenes permitidos y las cuentas de prueba se administran en Google Cloud; el acceso web quedó verificado. Las credenciales privadas no se guardan en el repositorio ni en este plan.
-- Android usa el paquete `mx.oficia.delicias`. El cliente OAuth de desarrollo está registrado; falta añadir la firma de la compilación EAS cuando exista. Expo Go no soporta la biblioteca nativa; se requiere compilación de desarrollo/EAS.
+- El prototipo Android actual usa Expo SDK 54, React Native 0.81 y `@react-native-google-signin/google-signin`; existe `eas.json`, pero no se ha generado una APK. Auditoría: Expo/EAS no son necesarios para publicar Android. Como el usuario prefiere el flujo de Yavoi!, la ruta acordada es Vite + React + Capacitor 8, con compilación local de Gradle; EAS puede retirarse cuando la migración y las pruebas nativas terminen.
+- Yavoi! usa Vite 8.2.2 y Capacitor 8.4.3, más proyectos Android con código nativo y Gradle. Oficia puede compartir esa arquitectura sin copiar a ciegas todas sus versiones ni cambiar Supabase/Vercel. La migración requiere adaptar el fondo de video y el acceso nativo de Google; el OAuth web ya funciona.
+- Entorno local revisado para la ruta Capacitor: Node 26, Android Studio y JDK 21 de Homebrew están disponibles; Android Studio también incluye JDK 25. El SDK de Android no apareció en la ruta predeterminada `~/Library/Android/sdk`, así que habrá que confirmar/instalar la plataforma y herramientas desde SDK Manager antes del primer APK.
 - La base de datos de Oficia está en el proyecto Supabase ya existente. Los identificadores de proyecto y organización se administran en los paneles de cada proveedor y se omiten de este plan público.
 - El repositorio público autorizado es [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). Código, documentos, propuestas de marca, recursos y migración SQL están publicados en `main`; las credenciales de acceso se administran fuera del repositorio.
 - La versión web está desplegada en **https://oficia-delicias.vercel.app** desde el equipo **Yavoi Alonso**. `vercel.json` usa `npm ci`, `npm run build:web` y `dist`. Supabase alojará datos y lógica de reservas; no se duplicará esa lógica en otro backend.
@@ -94,8 +96,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Publicación y verificación del acceso | Commit `38c0bd7` integrado en `main`; Vercel confirmó producción `Ready`. Se abrió el dominio de despliegue en una sesión sin acceso previo y se verificó que muestra el login inicial con Google, correo y contraseña. |
 | 14 oct 2026 | Preparación de compilación Android nativa | Se instaló `expo-dev-client` compatible con Expo SDK 54 y se añadió `eas.json` con APK de desarrollo/prueba y AAB de producción; los perfiles incluyen las variables públicas requeridas por la app. La exportación Android no genera una APK. `npx eas-cli whoami` confirmó que no hay sesión EAS en este equipo y no hay JDK/Android SDK local; proyecto EAS, APK y su SHA-1 siguen pendientes. |
 | 14 oct 2026 | Fondo de video en el acceso | El video proporcionado se integró como fondo a pantalla completa y silencioso, en bucle, con recorte adaptable y velo ciruela translúcido. El logo, la propuesta de valor y la tarjeta de acceso conservan contraste. `expo-video` permite el mismo fondo en Android y web; tipos y ambas exportaciones pasan. Commit `3e55e9c` integrado en `main`; Vercel confirmó producción `Ready`. Falta probar la reproducción en una APK instalada. La auditoría npm reporta 39 avisos; se deja su revisión como paso previo a Play Store para evitar actualizaciones mayores automáticas sobre Expo SDK 54. |
-
 | 14 oct 2026 | Corrección del login web en blanco | La sesión limpia reproducía `Cannot read properties of undefined (reading 'SharedObject')` al cargar `expo-video`. Se importó `expo` antes del reproductor para inicializar el núcleo. Tipos y exportación web pasan. Commit `3d06d93` publicado en `main`; Vercel reportó éxito y se confirmó el login con Google, correo y contraseña en producción. |
+| 14 oct 2026 | Revisión de Expo/EAS frente a Yavoi! | El chat y el proyecto de Yavoi! confirman Vite 8.2.2 + Capacitor 8.4.3 y Android/Gradle nativo; Oficia usa Expo SDK 54 + React Native 0.81. Expo puede compilar sin EAS mediante Android/Gradle local, y Capacitor también requiere Android Studio/SDK para APK nativa. Conforme a la preferencia del usuario, el plan cambia a una migración gradual a Vite + React + Capacitor; en esta revisión no se tocó el runtime publicado ni se cambió el código de la app. |
 
 ## Correspondencia con los mockups
 
@@ -115,8 +117,9 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 ## Próximo paso concreto
 
 1. Probar cliente y anfitrión con cuentas distintas, enviar una solicitud de prueba controlada y validar las políticas RLS y el cambio de estado desde el panel.
-2. Iniciar sesión en Expo/EAS en este equipo con `npx eas-cli login`; después generar la APK Android de desarrollo, probar Google nativo y registrar la SHA-1 de EAS en Google Cloud.
-3. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar migraciones con la CLI; recibir inventario real y preparar Play Console.
+2. Migrar gradualmente el frontend a Vite + React + Capacitor, conservando Supabase, el dominio de Vercel y las pantallas actuales; reemplazar `expo-video` y el selector nativo de Google por opciones compatibles con Capacitor.
+3. Generar una APK de depuración con Android Studio/Gradle, probar login, catálogo, solicitudes y panel de anfitrión; registrar en Google Cloud la huella de la firma que se usará para publicar.
+4. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar migraciones con la CLI; recibir inventario real y preparar Play Console.
 
 ## Fase final · Portal profesional de administración de Oficia
 
