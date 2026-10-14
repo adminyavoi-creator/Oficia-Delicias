@@ -6,6 +6,7 @@ import { Booking, Space, Unit } from './data';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const publishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
 export const backendConfigured = Boolean(supabaseUrl && publishableKey);
+export const googleAuthConfigured = Boolean(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
 
 const isServer = typeof window === 'undefined';
 const webSafeStorage = {
@@ -16,7 +17,7 @@ const webSafeStorage = {
 
 export const supabase = backendConfigured
   ? createClient(supabaseUrl, publishableKey, {
-      auth: { storage: webSafeStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
+      auth: { storage: webSafeStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: !isServer, flowType: 'pkce' },
     })
   : null;
 

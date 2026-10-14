@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** la app ahora conecta el catálogo, el acceso por correo y las solicitudes a Supabase con RLS. El código y dependencias ya compilan localmente; las dos variables públicas están configuradas en Vercel Production. Falta publicar este cambio en GitHub para desplegarlo, asociar una cuenta anfitriona con los espacios, probar dos cuentas y recorrer Android. El inventario continúa siendo de muestra. Este archivo se actualiza al cerrar cada tarea para que el siguiente paso sea inequívoco.
+**Estado actual (14 de octubre de 2026):** la app conecta el catálogo, el acceso por correo y las solicitudes a Supabase con RLS; esa versión ya se desplegó desde `main` en Vercel. El acceso con Google está implementado para Android nativo y web usando la misma identidad de Supabase. Google Auth Platform ya tiene clientes OAuth web y Android; el Client ID web está en Vercel Production y en el entorno local. Falta que el usuario reemplace el secreto anterior por el recién rotado en Supabase, habilite el proveedor y guarde. La cuenta anfitriona `admin.yavoi@gmail.com` aún no existe en Supabase. El inventario continúa siendo de muestra.
 
 ## Objetivo
 
@@ -26,6 +26,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | --- | --- | --- |
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
 | Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | Auth, catálogo y solicitudes conectados; falta asignar anfitrión y probar dos cuentas |
+| Acceso con Google en web y Android | En curso | Clientes OAuth web y Android creados; Client ID web configurado en Vercel; falta pegar el secreto rotado en Supabase, habilitar y guardar el proveedor |
 | Proyecto Vercel y frontend web | Completada | `oficia-delicias.vercel.app`, desplegado desde `main` en el equipo Yavoi Alonso |
 | Disponibilidad, horarios y confirmación real del anfitrión | Pendiente | Reglas de operación y calendario |
 | Pagos, cancelaciones y facturación | Pendiente | Proveedor de pagos y políticas comerciales |
@@ -41,6 +42,10 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 - El comprobante es de **solicitud enviada**; el acceso y el cobro quedan pendientes de confirmación real.
 - El usuario confirmó que **todavía no hay inventario real**. Se mantienen espacios de muestra.
 - El usuario eligió que **las solicitudes reales lleguen a un panel dentro de Oficia**. La vista local actual demuestra el flujo; falta servidor, cuentas y permisos.
+- El correo elegido para la cuenta anfitriona es **admin.yavoi@gmail.com**; una consulta de Auth no encontró esa cuenta todavía. La app no crea contraseñas ni vincula espacios a cuentas inexistentes.
+- Google Auth usa el proveedor de **Supabase Auth** en web y Android. Android usa el selector nativo de Google y entrega el token de identidad a Supabase; la web inicia OAuth con el mismo proveedor. Ambos caminos comparten usuario y RLS.
+- Google Auth Platform se creó para **Oficia · Tu espacio a tu hora**, con audiencia externa y el correo de la cuenta activa como contacto técnico. El cliente web tiene el origen de Vercel, `http://localhost:8081` y el callback de Supabase. El usuario regeneró el secreto y lo conserva en su portapapeles; no se lee ni se copia en esta sesión. El proveedor Google sigue **desactivado** en Supabase, pendiente de que el usuario pegue el secreto nuevo y guarde.
+- Android usa el paquete `mx.oficia.delicias`. Cliente OAuth Android de desarrollo creado con la huella SHA-1 local `4B:7F:0B:13:DF:68:CF:7A:7A:51:CB:84:47:85:D7:49:AF:62:16:CF`. Falta registrar la huella de firma de publicación/EAS cuando exista. Expo Go no soporta la biblioteca nativa; se requiere compilación de desarrollo/EAS.
 - Proyecto de datos existente: **Oficia-delicias**, ID `vfvqmlsgqxiarmbquhco`, en la organización `adminyavoi-creator's Org` (plan Free). No se creó otro proyecto.
 - El repositorio público autorizado es [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). Código, documentos, propuestas de marca, recursos y migración SQL están publicados en `main`. El conector GitHub conectado como `adminyavoi-creator` pudo publicar; la credencial Git local aún apunta a `TheDevLogos`, así que los siguientes cambios remotos deben hacerse con el conector o después de actualizar esa credencial.
 - La versión web está desplegada en **https://oficia-delicias.vercel.app** desde el equipo **Yavoi Alonso**. `vercel.json` usa `npm ci`, `npm run build:web` y `dist`. Supabase alojará datos y lógica de reservas; no se duplicará esa lógica en otro backend.
@@ -71,6 +76,11 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Conexión inicial con Supabase | `src/backend.ts` crea el cliente con variables públicas y almacenamiento de sesión. El catálogo usa los espacios publicados; registro/inicio de sesión por correo y reservas persistidas usan RLS y cálculo del servidor. El panel consulta solamente solicitudes de espacios vinculados a la cuenta. |
 | 14 oct 2026 | Variables de producción | Vercel Production tiene `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` como configuración pública. La escritura vía conector API recibió 403; se configuraron desde la sesión del panel web. `.env.local` local está ignorado y `.env.example` contiene solo marcadores. |
 | 14 oct 2026 | Verificación de conexión | `npm run typecheck` y `npm run build:web` terminaron correctamente con el cliente Supabase configurado. Falta desplegar el commit y probar Auth con cuentas reales sin generar datos ficticios. |
+| 14 oct 2026 | Publicación de conexión Supabase | GitHub recibió los cambios de backend y Vercel mostró una implementación `Ready` desde `main`; incluye catálogo, acceso por correo y reservas en Supabase. |
+| 14 oct 2026 | Código Google Auth | Selector nativo de Google para Android y OAuth web, ambos con Supabase Auth. Web y Android compilaron; el botón se mantiene oculto hasta configurar el cliente web. Proveedor aún desactivado por falta de credenciales OAuth. |
+| 14 oct 2026 | Google Auth Platform y cliente web | App Oficia registrada como externa; el usuario aceptó la Política de Datos del Usuario y confirmó crear el cliente web. Google muestra el acceso limitado a usuarios de prueba. Rotar el secreto desde Google Cloud antes de configurarlo en Supabase. Huella SHA-1 de desarrollo identificada. |
+| 14 oct 2026 | Clientes OAuth y preparación de proveedor | Se creó el cliente Android de desarrollo tras confirmación del usuario. Supabase tiene cargados los IDs públicos web y Android en el formulario Google; el secreto permanece enmascarado y el formulario sin guardar para que el usuario pegue el secreto recién rotado y habilite el proveedor. `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` está en Vercel Production y `.env.local`; hace falta un nuevo despliegue después de publicar los cambios. |
+| 14 oct 2026 | Cuenta anfitriona | Supabase no encontró `admin.yavoi@gmail.com` en `auth.users`; queda pendiente registrarse en Oficia y después asociar la cuenta a los espacios de muestra. |
 
 ## Correspondencia con los mockups
 
@@ -89,8 +99,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Publicar el cambio de integración a GitHub y esperar el despliegue de Vercel con las variables ya configuradas.
-2. Vincular la cuenta de anfitrión a los espacios demostrativos y confirmar los ajustes de autenticación por correo.
-3. Probar cliente y anfitrión con cuentas distintas, RLS y solicitudes que coincidan en horario.
-4. Registrar correctamente en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar futuras migraciones con la CLI.
-5. Recibir inventario real, direcciones, fotos, tarifas y horarios; después probar Android y preparar Play Console. No se detectó emulador disponible en este equipo.
+1. En la pestaña Supabase abierta, reemplazar el secreto antiguo por el nuevo del portapapeles, activar «Enable Sign in with Google» y guardar. El formulario ya incluye ambos IDs públicos; no activar «Skip nonce checks».
+2. Publicar los cambios de acceso Google en `main` y dejar que Vercel compile la versión con `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
+3. Agregar usuarios de prueba en Google Auth Platform para la audiencia externa; crear una compilación Android de desarrollo y comprobar inicio de sesión web/nativo con la misma cuenta. Agregar la huella de firma de publicación/EAS cuando exista.
+4. Crear la cuenta anfitriona con Google o correo y vincularla a los espacios de muestra; probar cliente y anfitrión con cuentas distintas, RLS y horarios coincidentes.
+5. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar migraciones con la CLI; recibir inventario real y preparar Play Console.
