@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** la app conecta el catálogo, el acceso por correo y las solicitudes a Supabase con RLS; esa versión ya se desplegó desde `main` en Vercel. El acceso con Google está implementado para Android nativo y web usando la misma identidad de Supabase. Google Auth Platform ya tiene clientes OAuth web y Android; el Client ID web está en Vercel Production y en el entorno local. Falta que el usuario reemplace el secreto anterior por el recién rotado en Supabase, habilite el proveedor y guarde. La cuenta anfitriona `admin.yavoi@gmail.com` aún no existe en Supabase. El inventario continúa siendo de muestra.
+**Estado actual (14 de octubre de 2026):** la app conecta el catálogo, el acceso por correo y las solicitudes a Supabase con RLS; esa versión ya se desplegó desde `main` en Vercel. El acceso con Google está implementado para Android nativo y web usando la misma identidad de Supabase. Google Auth Platform ya tiene clientes OAuth web y Android; el Client ID web está en Vercel Production y en el entorno local. Supabase muestra Google habilitado y guardado; falta probar el inicio de sesión real en web y Android. La cuenta anfitriona `admin.yavoi@gmail.com` aún no existe en Supabase. El inventario continúa siendo de muestra.
 
 ## Objetivo
 
@@ -26,7 +26,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | --- | --- | --- |
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
 | Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | Auth, catálogo y solicitudes conectados; falta asignar anfitrión y probar dos cuentas |
-| Acceso con Google en web y Android | En curso | Clientes OAuth web y Android creados; Client ID web configurado en Vercel; falta pegar el secreto rotado en Supabase, habilitar y guardar el proveedor |
+| Acceso con Google en web y Android | En curso | Proveedor habilitado y guardado; falta validar el recorrido web y Android y agregar la huella de publicación cuando exista |
 | Proyecto Vercel y frontend web | Completada | `oficia-delicias.vercel.app`, desplegado desde `main` en el equipo Yavoi Alonso |
 | Disponibilidad, horarios y confirmación real del anfitrión | Pendiente | Reglas de operación y calendario |
 | Pagos, cancelaciones y facturación | Pendiente | Proveedor de pagos y políticas comerciales |
@@ -44,7 +44,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 - El usuario eligió que **las solicitudes reales lleguen a un panel dentro de Oficia**. La vista local actual demuestra el flujo; falta servidor, cuentas y permisos.
 - El correo elegido para la cuenta anfitriona es **admin.yavoi@gmail.com**; una consulta de Auth no encontró esa cuenta todavía. La app no crea contraseñas ni vincula espacios a cuentas inexistentes.
 - Google Auth usa el proveedor de **Supabase Auth** en web y Android. Android usa el selector nativo de Google y entrega el token de identidad a Supabase; la web inicia OAuth con el mismo proveedor. Ambos caminos comparten usuario y RLS.
-- Google Auth Platform se creó para **Oficia · Tu espacio a tu hora**, con audiencia externa y el correo de la cuenta activa como contacto técnico. El cliente web tiene el origen de Vercel, `http://localhost:8081` y el callback de Supabase. El usuario regeneró el secreto y lo conserva en su portapapeles; no se lee ni se copia en esta sesión. `admin.yavoi@gmail.com` ya está agregado como usuario de prueba. El proveedor Google sigue **desactivado** en Supabase, pendiente de que el usuario pegue el secreto nuevo y guarde.
+- Google Auth Platform se creó para **Oficia · Tu espacio a tu hora**, con audiencia externa y el correo de la cuenta activa como contacto técnico. El cliente web tiene el origen de Vercel, `http://localhost:8081` y el callback de Supabase. El usuario regeneró el secreto y lo conserva en su portapapeles; no se lee ni se copia en esta sesión. `admin.yavoi@gmail.com` ya está agregado como usuario de prueba. Supabase muestra el proveedor Google habilitado y guardado; no se revela ni se registra el secreto.
 - Android usa el paquete `mx.oficia.delicias`. Cliente OAuth Android de desarrollo creado con la huella SHA-1 local `4B:7F:0B:13:DF:68:CF:7A:7A:51:CB:84:47:85:D7:49:AF:62:16:CF`. Falta registrar la huella de firma de publicación/EAS cuando exista. Expo Go no soporta la biblioteca nativa; se requiere compilación de desarrollo/EAS.
 - Proyecto de datos existente: **Oficia-delicias**, ID `vfvqmlsgqxiarmbquhco`, en la organización `adminyavoi-creator's Org` (plan Free). No se creó otro proyecto.
 - El repositorio público autorizado es [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). Código, documentos, propuestas de marca, recursos y migración SQL están publicados en `main`. El conector GitHub conectado como `adminyavoi-creator` pudo publicar; la credencial Git local aún apunta a `TheDevLogos`, así que los siguientes cambios remotos deben hacerse con el conector o después de actualizar esa credencial.
@@ -83,6 +83,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Publicación de Google Auth | Commit `a256788` publicado en `main`; Vercel confirmó despliegue de producción Ready. `npm run typecheck`, `npm run build:web` y `npx expo export --platform android` pasaron. |
 | 14 oct 2026 | Usuario de prueba OAuth | Con autorización del usuario, se agregó `admin.yavoi@gmail.com` a los usuarios de prueba del proyecto Google Auth Platform. Confirmado en la lista de audiencia. |
 | 14 oct 2026 | Cuenta anfitriona | Supabase no encontró `admin.yavoi@gmail.com` en `auth.users`; queda pendiente registrarse en Oficia y después asociar la cuenta a los espacios de muestra. |
+| 14 oct 2026 | Proveedor Google en Supabase | La pantalla de proveedores muestra «Enable Sign in with Google» activo y el botón Guardar deshabilitado, señal de que el cambio ya está guardado. No se reveló ni se leyó el secreto. Prueba de acceso pendiente. |
 
 ## Correspondencia con los mockups
 
@@ -101,8 +102,38 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. En la pestaña Supabase abierta, reemplazar el secreto antiguo por el nuevo del portapapeles, activar «Enable Sign in with Google» y guardar. El formulario ya incluye ambos IDs públicos; no activar «Skip nonce checks».
-2. Probar inicio de sesión web y Android después de guardar el proveedor; el código ya está en producción con `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
-3. `admin.yavoi@gmail.com` ya está agregado como usuario de prueba. Crear una compilación Android de desarrollo y comprobar el inicio de sesión web/nativo con esa cuenta; agregar la huella de firma de publicación/EAS cuando exista.
-4. Crear la cuenta anfitriona con Google o correo y vincularla a los espacios de muestra; probar cliente y anfitrión con cuentas distintas, RLS y horarios coincidentes.
-5. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar migraciones con la CLI; recibir inventario real y preparar Play Console.
+1. Probar en la web el inicio con Google usando `admin.yavoi@gmail.com`; al autenticarse se creará la cuenta anfitriona que faltaba.
+2. Asignar esa cuenta a los espacios de muestra y validar el panel con otra cuenta de cliente, solicitudes y políticas RLS.
+3. Crear una compilación Android de desarrollo y comprobar el selector nativo con la misma cuenta; agregar la huella de firma de publicación/EAS cuando exista.
+4. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar migraciones con la CLI; recibir inventario real y preparar Play Console.
+
+## Fase final · Portal profesional de administración de Oficia
+
+Al cerrar las tareas de lanzamiento de la app, construir un portal web interno, responsivo y en español para administrar el catálogo y toda la operación diaria de Oficia. Debe vivir en una ruta protegida del proyecto web existente, compartir Supabase como backend y conservar la app de clientes como una experiencia separada. El primer despliegue puede operar con espacios de muestra; los datos de muestra deben identificarse con claridad y no confundirse con inventario disponible para venta.
+
+### Módulos de administración
+
+| Módulo | Alcance requerido |
+| --- | --- |
+| Inicio operativo | Indicadores de solicitudes por estado, ocupación, espacios publicados, ingresos confirmados cuando existan pagos y tareas que requieren atención; filtros por periodo y sede; alertas de conflictos o datos incompletos. |
+| Espacios | Alta, edición, vista previa, publicación/pausa y archivo; nombre, descripción, tipo, dirección, zona, ubicación, capacidad, privacidad, reglas, contacto, estado y anfitrión responsable; marcar explícitamente registros de demostración. |
+| Fotos y equipamiento | Carga, orden, portada y retiro de fotografías en Supabase Storage; etiquetas de internet, pantalla, proyector, pizarrón, sala privada, café, accesibilidad y otros servicios; validación de imágenes y campos obligatorios antes de publicar. |
+| Precios y disponibilidad | Tarifas por hora, día, semana y capacidad; mínimos de renta, horarios, días de operación, cierres, bloqueos y excepciones; calendario por espacio con zona horaria local; impedir traslapes al crear o aprobar solicitudes. |
+| Solicitudes y reservas | Bandeja con búsqueda y filtros; detalle del cliente, espacio, horario, duración, precio estimado y notas; aprobar, rechazar, proponer cambio, cancelar y registrar llegada/finalización; historial de estados y motivo; diferenciar solicitud pendiente, reserva confirmada y pago liquidado. |
+| Clientes y anfitriones | Consulta de perfiles, reservas e incidencias; asignación de anfitrión a espacios; activar o suspender acceso operativo sin borrar historial; permisos por rol y sede. No exponer datos personales innecesarios. |
+| Mensajes y avisos | Plantillas en español para recepción, confirmación, cambio y cancelación; avisos dentro de la app y correo cuando el proveedor esté configurado; registro del envío y su resultado; no anunciar confirmaciones antes de que la operación las autorice. |
+| Reportes | Solicitudes, conversión, ocupación, cancelaciones, demanda por zona y desempeño de espacios; exportación CSV con filtros y fechas; separar importes estimados de cobros reales y contemplar una futura conciliación/facturación. |
+| Configuración operativa | Categorías, amenidades, zonas atendidas, horarios generales, políticas, anticipación, ventanas de cancelación, impuestos/comisiones y datos de contacto; mantener historial y señalar cambios que afecten reservas futuras. |
+| Auditoría y soporte | Registro de quién cambió espacios, precios, disponibilidad, estados y permisos, con fecha y valores relevantes; búsqueda de incidencias, notas internas y acceso rápido a la reserva relacionada. |
+
+### Entregas finales y criterios de aceptación
+
+1. **Modelo de acceso:** definir y documentar roles `admin`, `operaciones` y `anfitrión`; proteger la ruta y cada operación en servidor/RLS, aplicar mínimo privilegio y validar permisos también en Supabase. Ningún secreto de servicio se incluye en el navegador.
+2. **Diseño y navegación:** panel lateral para escritorio, navegación usable en móvil, estados vacíos, carga, error y confirmación; componentes con la identidad coral/ciruela de Oficia y lenguaje claro en español.
+3. **Operación de espacios:** ciclo completo de borrador → revisión → publicado → pausado/archivado, edición de fotos/equipamiento y vista previa de la ficha pública.
+4. **Operación de reservas:** ciclo completo de recepción → decisión del anfitrión → confirmación/cambio/cancelación → cierre, con controles de disponibilidad y registro auditable.
+5. **Seguridad y privacidad:** políticas RLS probadas con cuenta administradora, operaciones y anfitrión; un anfitrión solo administra sus espacios y solicitudes relacionadas; clientes y roles sin permiso no acceden a la consola.
+6. **Calidad:** validar formularios, errores de red, conflictos de horarios, permisos, exportaciones, accesibilidad básica, escritorio y Android móvil; comprobar que una decisión del portal se refleja correctamente en la app.
+7. **Salida a producción:** documentación de uso, respaldo/recuperación, variables de entorno, despliegue de Vercel y lista de verificación; no activar cobros, disponibilidad garantizada ni notificaciones externas hasta configurar y probar sus dependencias reales.
+
+**Definición de terminado:** el equipo de Oficia puede operar el día a día sin editar la base manualmente: publicar y mantener espacios, ver disponibilidad, gestionar solicitudes, atender anfitriones/clientes, revisar reportes y rastrear cambios. Las acciones tienen permisos verificados en backend y cada cambio importante queda auditado.
