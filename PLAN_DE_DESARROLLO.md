@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** la versión web de Oficia ya está publicada en Vercel y el repositorio público contiene el código, la marca, el plan y la migración inicial. Supabase Oficia-delicias tiene las tablas `spaces` y `bookings`, cuatro espacios demostrativos y seguridad por fila activada. La app publicada aún usa datos locales; faltan conectar Auth y las reservas al backend, registrar la migración en el historial remoto, probar Android y cargar inventario real. Este archivo se actualiza al cerrar cada tarea para que el siguiente paso sea inequívoco.
+**Estado actual (14 de octubre de 2026):** la app ahora conecta el catálogo, el acceso por correo y las solicitudes a Supabase con RLS. El código y dependencias ya compilan localmente; las dos variables públicas están configuradas en Vercel Production. Falta publicar este cambio en GitHub para desplegarlo, asociar una cuenta anfitriona con los espacios, probar dos cuentas y recorrer Android. El inventario continúa siendo de muestra. Este archivo se actualiza al cerrar cada tarea para que el siguiente paso sea inequívoco.
 
 ## Objetivo
 
@@ -17,7 +17,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 5. Favoritos, reservas y perfil | Completada | Secciones funcionales del prototipo | Guardar favoritos y consultar solicitudes durante la sesión |
 | 6. Filtros y datos locales | Completada | Filtro por capacidad/servicios y almacenamiento en el dispositivo | Favoritos y solicitudes se recuperan al abrir la app |
 | 7. Panel de anfitrión de demostración | Completada | Vista de solicitudes y cambio de estado local | Confirmar o rechazar una solicitud en el mismo dispositivo |
-| 8. Verificación | En curso | Tipos, compilación y recorrido en dispositivo | Tipos y paquetes correctos; prueba visual/nativa pendiente |
+| 8. Verificación | En curso | Tipos, compilación y recorrido en dispositivo | Tipos y compilación web correctos; prueba visual/nativa pendiente |
 | 9. Diseño de conexión real | Completada | `ARQUITECTURA_BACKEND.md` | Flujo cliente–anfitrión, datos y permisos definidos |
 
 ## Fase 2 · Antes del lanzamiento
@@ -25,7 +25,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Tarea | Estado | Dependencia |
 | --- | --- | --- |
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
-| Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | Esquema y permisos creados en Supabase; falta conectar la app y probar dos cuentas |
+| Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | Auth, catálogo y solicitudes conectados; falta asignar anfitrión y probar dos cuentas |
 | Proyecto Vercel y frontend web | Completada | `oficia-delicias.vercel.app`, desplegado desde `main` en el equipo Yavoi Alonso |
 | Disponibilidad, horarios y confirmación real del anfitrión | Pendiente | Reglas de operación y calendario |
 | Pagos, cancelaciones y facturación | Pendiente | Proveedor de pagos y políticas comerciales |
@@ -68,6 +68,9 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Complemento GitHub | Se instaló GitHub en ChatGPT y la interfaz confirmó la instalación. Las herramientas del conector de esta sesión aún responden «Unknown tool» y la credencial Git local sigue siendo `TheDevLogos`; el repositorio permanece vacío. |
 | 14 oct 2026 | Publicación GitHub | Con el conector activo en `adminyavoi-creator`, se publicó el árbol completo de 58 archivos en `main`, incluyendo logo, propuesta de marca, app, documentos y migración SQL. Commit publicado: `943932c`. |
 | 14 oct 2026 | Proyecto y despliegue Vercel | Creado `oficia-delicias` en el equipo Yavoi Alonso. La compilación web terminó correctamente y la página pública mostró la bienvenida; también se abrió Inicio y aparecieron los cuatro espacios de muestra. URL: `https://oficia-delicias.vercel.app`. |
+| 14 oct 2026 | Conexión inicial con Supabase | `src/backend.ts` crea el cliente con variables públicas y almacenamiento de sesión. El catálogo usa los espacios publicados; registro/inicio de sesión por correo y reservas persistidas usan RLS y cálculo del servidor. El panel consulta solamente solicitudes de espacios vinculados a la cuenta. |
+| 14 oct 2026 | Variables de producción | Vercel Production tiene `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` como configuración pública. La escritura vía conector API recibió 403; se configuraron desde la sesión del panel web. `.env.local` local está ignorado y `.env.example` contiene solo marcadores. |
+| 14 oct 2026 | Verificación de conexión | `npm run typecheck` y `npm run build:web` terminaron correctamente con el cliente Supabase configurado. Falta desplegar el commit y probar Auth con cuentas reales sin generar datos ficticios. |
 
 ## Correspondencia con los mockups
 
@@ -86,7 +89,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Conectar la app a Supabase usando la clave publicable, configurar Auth y sustituir catálogo y solicitudes locales por consultas protegidas con RLS.
-2. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar futuras migraciones con la CLI.
-3. Probar el panel interno con cuentas distintas, permisos de anfitrión y solicitudes que coincidan en horario.
-4. Recorrer el flujo en Android y preparar la publicación en Play Console. No se detectó emulador disponible en este equipo.
+1. Publicar el cambio de integración a GitHub y esperar el despliegue de Vercel con las variables ya configuradas.
+2. Vincular la cuenta de anfitrión a los espacios demostrativos y confirmar los ajustes de autenticación por correo.
+3. Probar cliente y anfitrión con cuentas distintas, RLS y solicitudes que coincidan en horario.
+4. Registrar correctamente en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar futuras migraciones con la CLI.
+5. Recibir inventario real, direcciones, fotos, tarifas y horarios; después probar Android y preparar Play Console. No se detectó emulador disponible en este equipo.
