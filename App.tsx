@@ -3,6 +3,7 @@ import { Alert, Modal, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextI
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session, User } from '@supabase/supabase-js';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { Brand, Mark } from './src/components/Brand';
 import { Icon, IconName } from './src/components/Icon';
 import { PrimaryButton, SpaceCard, SpacePhoto } from './src/components/UI';
@@ -17,6 +18,16 @@ const times = ['08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '16:00', '1
 const tabItems: { label: Tab; icon: IconName }[] = [
   { label: 'Inicio', icon: 'home' }, { label: 'Explorar', icon: 'explore' }, { label: 'Favoritos', icon: 'heart' }, { label: 'Reservas', icon: 'calendar' }, { label: 'Perfil', icon: 'user' },
 ];
+
+function AuthVideoBackground() {
+  const player = useVideoPlayer(require('./assets/oficia-login-background.mp4'), video => {
+    video.loop = true;
+    video.muted = true;
+    video.play();
+  });
+
+  return <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} allowsFullscreen={false} allowsPictureInPicture={false} playsInline surfaceType="textureView" pointerEvents="none" accessible={false} />;
+}
 
 function AppContent() {
   const [screen, setScreen] = useState<Screen>('welcome');
@@ -210,8 +221,11 @@ function AppContent() {
   ]);
 
   if (!hydrated || (backendConfigured && !authReady)) return <SafeAreaView style={styles.root} edges={['top', 'bottom']}><View style={styles.loading}><Mark size={70} /><Text style={styles.loadingText}>Preparando Oficia…</Text></View></SafeAreaView>;
-  return <SafeAreaView style={styles.root} edges={['top', 'bottom']}><StatusBar barStyle="dark-content" backgroundColor={palette.cream} />
-    {screen === 'auth' && <ScrollView style={styles.flex} contentContainerStyle={styles.authContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+  return <SafeAreaView style={[styles.root, screen === 'auth' && styles.authScreen]} edges={['top', 'bottom']}><StatusBar barStyle={screen === 'auth' ? 'light-content' : 'dark-content'} backgroundColor={screen === 'auth' ? palette.plum : palette.cream} />
+    {screen === 'auth' && <View style={styles.authScreen}>
+      <AuthVideoBackground />
+      <View pointerEvents="none" style={styles.authVideoShade} />
+      <ScrollView style={styles.flex} contentContainerStyle={styles.authContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <View style={styles.authHero}>
         <View style={styles.authDecorOne} /><View style={styles.authDecorTwo} />
         {pendingBooking ? <Pressable accessibilityRole="button" accessibilityLabel="Volver al espacio" onPress={() => { setPendingBooking(false); setAuthNotice(''); setScreen('detail'); }} style={styles.authBack}><Icon name="back" color={palette.white} size={19} /><Text style={styles.authBackText}>Volver al espacio</Text></Pressable> : null}
@@ -234,7 +248,8 @@ function AppContent() {
         <View style={styles.authPrivacy}><Icon name="lock" size={14} color={palette.action} /><Text style={styles.authFootnote}>Tus solicitudes quedan vinculadas a tu cuenta. No se realizan cobros desde la app.</Text></View>
       </View>
       <View style={styles.authFooter}><Text style={styles.authFooterText}>Encuentra tu espacio. Enfócate en lo que sigue.</Text></View>
-    </ScrollView>}
+      </ScrollView>
+    </View>}
     {screen === 'welcome' && <ScrollView style={styles.flex} contentContainerStyle={styles.welcome} showsVerticalScrollIndicator={false}>
       <View style={styles.welcomeArt}><View style={styles.welcomeCircle} /><View style={styles.welcomePhotoWrap}><SpacePhoto uri={catalog[0].image} label="Espacio de trabajo luminoso" style={styles.welcomePhoto} /></View><View style={styles.welcomeMark}><Mark size={48} /></View></View>
       <View style={styles.welcomeBottom}><Brand /><Text style={styles.welcomeTitle}>Tu mejor trabajo{ '\n'}merece un gran lugar.</Text><Text style={styles.welcomeText}>Oficinas, salas y coworking listos para ti en Delicias y sus alrededores. Reserva desde una hora.</Text><PrimaryButton label="Explorar espacios" onPress={() => { setScreen('tabs'); AsyncStorage.setItem('oficia:welcome', 'yes').catch(() => {}); }} style={{ marginTop: 27 }} /><Text style={styles.demoNote}>Explora la versión de demostración</Text></View>
@@ -317,7 +332,9 @@ function ReceiptItem({ label, value }: { label: string; value: string }) {
 export default function App() { return <SafeAreaProvider><AppContent /></SafeAreaProvider>; }
 
 const authScreenStyles = StyleSheet.create({
-  authHero: { backgroundColor: palette.coral, borderRadius: 28, paddingHorizontal: 21, paddingTop: 21, paddingBottom: 18, minHeight: 318, overflow: 'hidden', maxWidth: 520, width: '100%', alignSelf: 'center' },
+  authScreen: { flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: palette.plum },
+  authVideoShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(48, 24, 34, 0.52)' },
+  authHero: { backgroundColor: 'rgba(81, 45, 55, 0.58)', borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1, borderRadius: 28, paddingHorizontal: 21, paddingTop: 21, paddingBottom: 18, minHeight: 318, overflow: 'hidden', maxWidth: 520, width: '100%', alignSelf: 'center' },
   authDecorOne: { position: 'absolute', top: -72, right: -38, width: 190, height: 190, borderRadius: 95, backgroundColor: '#FFFFFF1C' },
   authDecorTwo: { position: 'absolute', right: 43, top: 57, width: 82, height: 82, borderRadius: 41, borderWidth: 1, borderColor: '#FFFFFF35' },
   authBack: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 5, marginBottom: 14, paddingVertical: 5 },
@@ -342,7 +359,7 @@ const authScreenStyles = StyleSheet.create({
   authInputField: { flex: 1, minHeight: 48, color: palette.plum, fontSize: 14, paddingVertical: 8 },
   authPrivacy: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 2 },
   authFooter: { alignItems: 'center', paddingTop: 17, paddingBottom: 5 },
-  authFooterText: { color: palette.muted, fontSize: 10, textAlign: 'center' },
+  authFooterText: { color: '#FFF3F3', fontSize: 10, textAlign: 'center' },
   signOutButton: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 14, paddingVertical: 13, borderRadius: 16, marginTop: 22 },
   signOutIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.blush },
   signOutTitle: { color: palette.plum, fontSize: 13, fontWeight: '900' },
@@ -351,7 +368,7 @@ const authScreenStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   ...authScreenStyles,
-  authContent: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 15, paddingBottom: 35 }, authCard: { backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line, borderRadius: 23, padding: 22, marginTop: 20 }, authLabel: { color: palette.plum, fontSize: 12, fontWeight: '800', marginTop: 20, marginBottom: 8 }, authInput: { height: 50, borderRadius: 13, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.cream, paddingHorizontal: 14, color: palette.plum, fontSize: 14 }, googleButton: { height: 52, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.white, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 11, marginTop: 23 }, googleButtonDisabled: { opacity: .58 }, googleMark: { color: '#4285F4', fontSize: 19, fontWeight: '900' }, googleButtonText: { color: palette.plum, fontSize: 13, fontWeight: '800' }, authDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 19 }, authDividerLine: { flex: 1, height: 1, backgroundColor: palette.line }, authDividerText: { color: palette.muted, fontSize: 10 }, authNotice: { color: palette.action, fontSize: 12, lineHeight: 18, marginTop: 15 }, authSwitch: { alignItems: 'center', paddingVertical: 17, marginTop: 5 }, authSwitchText: { color: palette.action, fontSize: 12, fontWeight: '800', textAlign: 'center' }, authFootnote: { color: palette.muted, fontSize: 10, textAlign: 'center', lineHeight: 16 }, dataNotice: { flexDirection: 'row', gap: 9, alignItems: 'center', backgroundColor: palette.blush, borderRadius: 12, padding: 12, marginHorizontal: 20, marginTop: 14 }, dataNoticeText: { flex: 1, color: palette.plum, fontSize: 11, lineHeight: 16 },
+  authContent: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 15, paddingBottom: 35 }, authCard: { backgroundColor: 'rgba(255, 249, 248, 0.96)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.62)', borderRadius: 23, padding: 22, marginTop: 20 }, authLabel: { color: palette.plum, fontSize: 12, fontWeight: '800', marginTop: 20, marginBottom: 8 }, authInput: { height: 50, borderRadius: 13, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.cream, paddingHorizontal: 14, color: palette.plum, fontSize: 14 }, googleButton: { height: 52, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.white, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 11, marginTop: 23 }, googleButtonDisabled: { opacity: .58 }, googleMark: { color: '#4285F4', fontSize: 19, fontWeight: '900' }, googleButtonText: { color: palette.plum, fontSize: 13, fontWeight: '800' }, authDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 19 }, authDividerLine: { flex: 1, height: 1, backgroundColor: palette.line }, authDividerText: { color: palette.muted, fontSize: 10 }, authNotice: { color: palette.action, fontSize: 12, lineHeight: 18, marginTop: 15 }, authSwitch: { alignItems: 'center', paddingVertical: 17, marginTop: 5 }, authSwitchText: { color: palette.action, fontSize: 12, fontWeight: '800', textAlign: 'center' }, authFootnote: { color: palette.muted, fontSize: 10, textAlign: 'center', lineHeight: 16 }, dataNotice: { flexDirection: 'row', gap: 9, alignItems: 'center', backgroundColor: palette.blush, borderRadius: 12, padding: 12, marginHorizontal: 20, marginTop: 14 }, dataNoticeText: { flex: 1, color: palette.plum, fontSize: 11, lineHeight: 16 },
   root: { flex: 1, backgroundColor: palette.cream }, flex: { flex: 1 }, screenContent: { paddingBottom: 25 }, padded: { paddingHorizontal: 20 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 13 }, loadingText: { color: palette.plum, fontSize: 14, fontWeight: '800' },
   exploreFilter: { marginLeft: 12, padding: 6 }, filterDot: { position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: 4, backgroundColor: palette.action },
