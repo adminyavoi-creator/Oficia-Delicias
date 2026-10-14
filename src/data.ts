@@ -21,6 +21,7 @@ export type Space = {
 
 export type Booking = {
   id: string;
+  remoteId?: string;
   spaceId: string;
   date: string;
   time: string;
