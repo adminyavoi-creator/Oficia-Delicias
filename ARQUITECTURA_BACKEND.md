@@ -52,6 +52,7 @@ Las pantallas y modelos locales de `src/data.ts` sirven como referencia visual. 
 - La URL principal de Supabase es `https://oficia-delicias.vercel.app`; los retornos permitidos son producción y `http://localhost:8081` para desarrollo local.
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` está configurado en Vercel Production y `.env.local`. El inicio web con `admin.yavoi@gmail.com` terminó correctamente y creó la cuenta en Supabase.
 - El cliente Android de desarrollo existe para `mx.oficia.delicias` con la huella SHA-1 de desarrollo. La prueba nativa requiere development build/EAS; agregar la huella de publicación al preparar Play Console.
+- `eas.json` define perfiles de desarrollo y prueba con APK, más producción con AAB. Los tres llevan únicamente la URL, la clave publicable de Supabase y el ID público de OAuth necesarios para la app. La cuenta EAS todavía debe iniciar sesión antes de compilar y generar su huella de firma.
 - No guardar el Client Secret en la app ni en Vercel; se conserva únicamente en la configuración segura de Supabase.
 
 ## Estado de implementación
