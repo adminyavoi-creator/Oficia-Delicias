@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** prototipo local implementado y compilado para web y Android. Supabase Oficia-delicias ya contiene las tablas `spaces` y `bookings`, cuatro espacios de muestra y seguridad por fila en ambas. La app aún utiliza datos locales; faltan autenticación, sincronización, prueba en Android y publicación. El repositorio GitHub público existe pero continúa vacío porque la sesión local usa otra cuenta. Este archivo se actualiza al cerrar cada tarea para que el siguiente paso sea inequívoco.
+**Estado actual (14 de octubre de 2026):** la versión web de Oficia ya está publicada en Vercel y el repositorio público contiene el código, la marca, el plan y la migración inicial. Supabase Oficia-delicias tiene las tablas `spaces` y `bookings`, cuatro espacios demostrativos y seguridad por fila activada. La app publicada aún usa datos locales; faltan conectar Auth y las reservas al backend, registrar la migración en el historial remoto, probar Android y cargar inventario real. Este archivo se actualiza al cerrar cada tarea para que el siguiente paso sea inequívoco.
 
 ## Objetivo
 
@@ -26,7 +26,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | --- | --- | --- |
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
 | Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | Esquema y permisos creados en Supabase; falta conectar la app y probar dos cuentas |
-| Proyecto Vercel y frontend web | Pendiente | Publicar el código en `adminyavoi-creator/Oficia-Delicias` y conectar el repositorio |
+| Proyecto Vercel y frontend web | Completada | `oficia-delicias.vercel.app`, desplegado desde `main` en el equipo Yavoi Alonso |
 | Disponibilidad, horarios y confirmación real del anfitrión | Pendiente | Reglas de operación y calendario |
 | Pagos, cancelaciones y facturación | Pendiente | Proveedor de pagos y políticas comerciales |
 | Mapas y ubicación | Pendiente | Direcciones reales y proveedor de mapas |
@@ -42,8 +42,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 - El usuario confirmó que **todavía no hay inventario real**. Se mantienen espacios de muestra.
 - El usuario eligió que **las solicitudes reales lleguen a un panel dentro de Oficia**. La vista local actual demuestra el flujo; falta servidor, cuentas y permisos.
 - Proyecto de datos existente: **Oficia-delicias**, ID `vfvqmlsgqxiarmbquhco`, en la organización `adminyavoi-creator's Org` (plan Free). No se creó otro proyecto.
-- El repositorio público autorizado es `adminyavoi-creator/Oficia-Delicias`. El usuario autorizó publicar el código, documentos, logo y migración SQL. La publicación sigue pendiente por discrepancia de cuentas: la sesión local y el conector GitHub están conectados como `TheDevLogos`.
-- Vercel se configurará en el equipo **Yavoi Alonso** con el frontend web Expo. Supabase alojará los datos y la lógica de reservas; no se duplicará esa lógica en otro backend.
+- El repositorio público autorizado es [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). Código, documentos, propuestas de marca, recursos y migración SQL están publicados en `main`. El conector GitHub conectado como `adminyavoi-creator` pudo publicar; la credencial Git local aún apunta a `TheDevLogos`, así que los siguientes cambios remotos deben hacerse con el conector o después de actualizar esa credencial.
+- La versión web está desplegada en **https://oficia-delicias.vercel.app** desde el equipo **Yavoi Alonso**. `vercel.json` usa `npm ci`, `npm run build:web` y `dist`. Supabase alojará datos y lógica de reservas; no se duplicará esa lógica en otro backend.
 
 ## Registro de avances
 
@@ -66,6 +66,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Auditoría de seguridad | Security Advisor de Supabase actualizado: 0 errores y 0 advertencias. |
 | 14 oct 2026 | Segundo intento de publicación | El usuario indicó que conectó `adminyavoi-creator`, pero el conector y la credencial local aún reportan `TheDevLogos`; `git push` sigue devolviendo 403. No se publicó código ni se inició un despliegue vacío. |
 | 14 oct 2026 | Complemento GitHub | Se instaló GitHub en ChatGPT y la interfaz confirmó la instalación. Las herramientas del conector de esta sesión aún responden «Unknown tool» y la credencial Git local sigue siendo `TheDevLogos`; el repositorio permanece vacío. |
+| 14 oct 2026 | Publicación GitHub | Con el conector activo en `adminyavoi-creator`, se publicó el árbol completo de 58 archivos en `main`, incluyendo logo, propuesta de marca, app, documentos y migración SQL. Commit publicado: `943932c`. |
+| 14 oct 2026 | Proyecto y despliegue Vercel | Creado `oficia-delicias` en el equipo Yavoi Alonso. La compilación web terminó correctamente y la página pública mostró la bienvenida; también se abrió Inicio y aparecieron los cuatro espacios de muestra. URL: `https://oficia-delicias.vercel.app`. |
 
 ## Correspondencia con los mockups
 
@@ -84,7 +86,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Activar `adminyavoi-creator` como cuenta de escritura para el repositorio en la credencial Git local. El conector Codex aún muestra solo `TheDevLogos`, pese al intento de conexión. Publicar los commits `c564574` y `7401c69` más este registro y comprobar que Vercel puede leer el repositorio.
-2. Crear el proyecto Vercel en **Yavoi Alonso**, ejecutar `npm run build:web` con salida `dist` y comprobar la URL publicada.
-3. Conectar Expo a Supabase con la clave pública, Auth y consultas con RLS. La migración se ejecutó desde SQL Editor: registrar su versión en el historial de migraciones remoto antes de usar `supabase db push`, para evitar reaplicarla.
-4. Probar el flujo entre cliente y anfitrión con cuentas distintas y solicitudes solapadas. Después recorrer la app en un teléfono Android; no hubo emulador disponible en este equipo.
+1. Conectar la app a Supabase usando la clave publicable, configurar Auth y sustituir catálogo y solicitudes locales por consultas protegidas con RLS.
+2. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar futuras migraciones con la CLI.
+3. Probar el panel interno con cuentas distintas, permisos de anfitrión y solicitudes que coincidan en horario.
+4. Recorrer el flujo en Android y preparar la publicación en Play Console. No se detectó emulador disponible en este equipo.
