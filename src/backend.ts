@@ -1,10 +1,9 @@
-import 'react-native-url-polyfill/auto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AsyncStorage } from './storage';
 import { createClient } from '@supabase/supabase-js';
 import { Booking, Space, Unit } from './data';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const publishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? import.meta.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
 export const backendConfigured = Boolean(supabaseUrl && publishableKey);
 
 const isServer = typeof window === 'undefined';

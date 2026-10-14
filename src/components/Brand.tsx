@@ -1,15 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { palette } from '../theme';
 
 export function Mark({ size = 44 }: { size?: number }) {
-  return <Svg width={size} height={size} viewBox="0 0 200 200" accessibilityLabel="Símbolo de Oficia">
-    <Rect width="200" height="200" rx="43" fill={palette.coral} />
-    <Rect x="18" y="18" width="164" height="164" rx="34" fill="none" stroke="white" strokeWidth="11" />
-    <Path d="M94 24v92M24 106h49M94 143h82" fill="none" stroke="white" strokeWidth="11" strokeLinecap="round" />
-    <Circle cx="139" cy="66" r="15" fill={palette.blush} />
-  </Svg>;
+  return <svg width={size} height={size} viewBox="0 0 200 200" role="img" aria-label="Símbolo de Oficia">
+    <rect width="200" height="200" rx="43" fill={palette.coral} />
+    <rect x="18" y="18" width="164" height="164" rx="34" fill="none" stroke="white" strokeWidth="11" />
+    <path d="M94 24v92M24 106h49M94 143h82" fill="none" stroke="white" strokeWidth="11" strokeLinecap="round" />
+    <circle cx="139" cy="66" r="15" fill={palette.blush} />
+  </svg>;
 }
 
 export function Brand({ compact = false }: { compact?: boolean }) {

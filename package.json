@@ -1,34 +1,36 @@
 {
-  "name": "espacios-delicias",
+  "name": "oficia-delicias",
   "version": "1.0.0",
   "private": true,
-  "main": "node_modules/expo/AppEntry.js",
+  "type": "module",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "web": "expo start --web",
-    "build:web": "expo export --platform web",
+    "start": "vite --host 0.0.0.0",
+    "dev": "vite --host 0.0.0.0",
+    "build": "npm run typecheck && npm run build:web",
+    "build:web": "vite build && node scripts/build-pwa.mjs",
+    "preview": "vite preview --host 0.0.0.0",
+    "android:sync": "npm run build:web && cap sync android",
+    "android:open": "cap open android",
+    "android:debug": "cd android && ./gradlew assembleDebug",
+    "android:aab": "cd android && ./gradlew bundleRelease",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "2.2.0",
-    "@react-native-google-signin/google-signin": "16.1.5",
+    "@capacitor/android": "8.4.3",
+    "@capacitor/core": "8.4.3",
     "@supabase/supabase-js": "2.117.3",
-    "expo": "~54.0.0",
-    "expo-dev-client": "~6.0.21",
-    "expo-status-bar": "~3.0.9",
-    "expo-video": "~3.0.16",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-native": "0.81.5",
-    "react-native-safe-area-context": "~5.6.0",
-    "react-native-svg": "15.12.1",
-    "react-native-url-polyfill": "2.0.0",
-    "react-native-web": "^0.21.0"
+    "react-native-web": "0.21.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.4.3",
     "@types/react": "~19.1.10",
+    "@types/react-dom": "~19.1.9",
+    "@vitejs/plugin-react": "6.1.2",
+    "react-native": "0.81.5",
     "supabase": "2.121.0",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vite": "8.2.2"
   }
 }

@@ -1,25 +1,43 @@
 # Oficia
 
-Prototipo de app móvil Android en español, desarrollado con Expo y React Native para Delicias, Chihuahua y alrededores.
+Aplicación para descubrir y solicitar espacios de trabajo en Delicias, Chihuahua. La PWA y la aplicación Android comparten la misma interfaz React, el mismo proyecto Supabase y el dominio de Vercel.
 
-## Ejecutar
+## Tecnologías
 
-1. Instala Node.js 20 o superior.
-2. En esta carpeta, ejecuta `npm install`.
-3. Copia `.env.example` como `.env.local` y configura la URL de Supabase y la clave publicable del proyecto. Para habilitar Google en Android, agrega el cliente web OAuth en `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
-4. Para revisar las pantallas puedes ejecutar `npm run android` con Expo Go. Google Sign-In usa código nativo y requiere una compilación de desarrollo o EAS Build; Expo Go no lo incluye.
-5. Para revisar tipos, ejecuta `npm run typecheck`.
+- Vite 8 y React 19 para la interfaz.
+- Capacitor 8 y Android Studio/Gradle para Android.
+- Supabase Auth y Database para sesiones, catálogo y solicitudes.
+- PWA con caché de la interfaz para abrirla rápidamente y mostrar el shell sin conexión. Las consultas requieren internet.
 
-## Compilación Android con Google nativo
+## Desarrollo local
 
-La dependencia `expo-dev-client` y los perfiles EAS están preparados. Cuando se inicie sesión en una cuenta Expo/EAS desde este equipo (`npx eas-cli login`), se puede generar una APK instalable con `npx eas-cli build --platform android --profile development`. La primera compilación puede pedir vincular o crear el proyecto EAS y generar su llave de firma. Después, agrega a Google Cloud la huella SHA-1 de esa llave para habilitar Google Sign-In en esa compilación. La exportación Android de Expo solo valida el paquete JavaScript; no genera una APK.
+1. Usa Node.js 20.19 o posterior.
+2. Ejecuta `npm ci`.
+3. Copia `.env.example` como `.env.local` y configura URL/clave publicable de Supabase y el cliente web OAuth de Google.
+4. Ejecuta `npm run dev` para la PWA.
+5. Ejecuta `npm run typecheck` y `npm run build` antes de publicar cambios.
 
-Con Supabase configurado, Oficia carga el catálogo publicado, permite crear cuentas o iniciar sesión por correo y guarda solicitudes con la cuenta autenticada. El precio y la duración se calculan en la base de datos; el cliente no puede aprobar sus propias solicitudes. El panel muestra y responde únicamente solicitudes de espacios vinculados al anfitrión mediante `spaces.host_id`. No se hacen cobros. Si Supabase no está configurado, la app conserva el modo de demostración local.
+## Android
 
-Los cuatro espacios actuales son demostrativos; las fotos, ubicaciones, tarifas y opiniones no son inventario real. Para usar el panel, la cuenta anfitriona debe ser asociada a uno o más espacios desde la administración. Las reservas del usuario se guardan en Supabase y RLS limita la lectura a solicitudes propias o de espacios administrados por su cuenta.
+La carpeta Android se administra con Capacitor. El equipo de compilación necesita Android Studio, Android SDK 36 y JDK compatible con Gradle.
 
-Consulta `PLAN_DE_DESARROLLO.md` para el estado exacto y el próximo paso, `identidad.md` para la marca elegida y `ARQUITECTURA_BACKEND.md` para las reglas de datos y acceso.
+```sh
+npx cap add android        # una sola vez
+npm run android:sync       # compila la PWA y la sincroniza con Android
+npm run android:debug      # APK de depuración
+npm run android:open       # abre el proyecto Android en Android Studio
+```
+
+Para Google Play se genera un Android App Bundle firmado. Configura la llave de carga fuera del repositorio y registra en Google Cloud las huellas SHA-1 que correspondan al certificado de depuración y al certificado de carga/Play App Signing.
 
 ## Acceso con Google
 
-Android usa el selector nativo de cuentas de Google y entrega el token a Supabase Auth. La web usa OAuth del mismo proveedor; ambos caminos crean o recuperan la identidad de Google en el mismo proyecto Supabase. El botón aparece cuando Supabase está configurado. Para activar el acceso, configura el proveedor Google en Supabase con un cliente OAuth web y su secreto, autoriza `https://vfvqmlsgqxiarmbquhco.supabase.co/auth/v1/callback` en Google Cloud y agrega el cliente web público a `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`. Android también requiere registrar en Google Cloud el paquete `mx.oficia.delicias` y las huellas SHA-1 de las compilaciones que se probarán y publicarán.
+En web, Supabase Auth inicia el flujo OAuth; en Android, el plugin nativo de Oficia obtiene un token de Google y lo entrega a `supabase.auth.signInWithIdToken`. Ambos se conectan al mismo proveedor Google de Supabase. Las variables `EXPO_PUBLIC_*` anteriores se siguen aceptando durante la transición, pero los nombres nuevos son `VITE_*`.
+
+## PWA y Vercel
+
+Vercel ejecuta `npm ci` y `npm run build:web`, y publica `dist`. La PWA comparte código y datos con Android; su service worker guarda la interfaz y excluye el video de fondo para reducir la caché. El video se conserva en la app web y en el paquete Android.
+
+## Datos de demostración
+
+Los espacios, fotografías, ubicaciones, tarifas y reseñas de muestra no representan inventario real. La solicitud no confirma disponibilidad ni realiza un cobro. Consulta [PLAN_DE_DESARROLLO.md](PLAN_DE_DESARROLLO.md) para el avance y [ARQUITECTURA_BACKEND.md](ARQUITECTURA_BACKEND.md) para las reglas de datos y permisos.

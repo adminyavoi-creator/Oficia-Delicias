@@ -1,17 +1,17 @@
-import 'expo';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Modal, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AsyncStorage } from './src/storage';
 import { Session, User } from '@supabase/supabase-js';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import { SafeAreaProvider, SafeAreaView } from './src/components/SafeArea';
 import { Brand, Mark } from './src/components/Brand';
 import { Icon, IconName } from './src/components/Icon';
 import { PrimaryButton, SpaceCard, SpacePhoto } from './src/components/UI';
 import { Booking, Category, Space, Tab, Unit, categories, estimatedEnd, formatDate, formatMoney, isFutureSlot, nextDates, spaces } from './src/data';
 import { palette } from './src/theme';
 import { backendConfigured, BookingRow, databaseStatus, mapBooking, mapSpace, SpaceRow, supabase } from './src/backend';
-import { signInWithGoogle } from './src/googleAuth';
+import { signInWithGoogle, signOutFromGoogle } from './src/googleAuth';
+import { AuthVideoBackground } from './src/components/AuthVideoBackground';
+import { confirmInBrowser, showMessage } from './src/dialogs';
 
 type Screen = 'welcome' | 'tabs' | 'detail' | 'booking' | 'receipt' | 'host' | 'auth';
 type DetailSection = 'Acerca de' | 'Galería' | 'Opiniones';
@@ -19,16 +19,6 @@ const times = ['08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '16:00', '1
 const tabItems: { label: Tab; icon: IconName }[] = [
   { label: 'Inicio', icon: 'home' }, { label: 'Explorar', icon: 'explore' }, { label: 'Favoritos', icon: 'heart' }, { label: 'Reservas', icon: 'calendar' }, { label: 'Perfil', icon: 'user' },
 ];
-
-function AuthVideoBackground() {
-  const player = useVideoPlayer(require('./assets/oficia-login-background.mp4'), video => {
-    video.loop = true;
-    video.muted = true;
-    video.play();
-  });
-
-  return <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} allowsFullscreen={false} allowsPictureInPicture={false} playsInline surfaceType="textureView" pointerEvents="none" accessible={false} />;
-}
 
 function AppContent() {
   const [screen, setScreen] = useState<Screen>('welcome');
@@ -150,7 +140,7 @@ function AppContent() {
     const current = bookings.find(item => item.id === id);
     if (backendConfigured && supabase && current?.remoteId) {
       const { error } = await supabase.from('bookings').update({ status: databaseStatus(status), rejection_reason: status === 'Rechazada' ? 'No hay disponibilidad para ese horario.' : null }).eq('id', current.remoteId);
-      if (error) { Alert.alert('No se pudo actualizar', error.message); return; }
+      if (error) { showMessage('No se pudo actualizar', error.message); return; }
       await refreshRemoteData(user?.id ?? '');
     } else {
       setBookings(items => items.map(item => item.id === id ? { ...item, status } : item));
@@ -160,14 +150,14 @@ function AppContent() {
   const submitBooking = async () => {
     if (!selected) return;
     if (!isFutureSlot(selectedDate, selectedTime)) {
-      Alert.alert('Horario no disponible', 'Elige una fecha y hora futuras para enviar tu solicitud.');
+      showMessage('Horario no disponible', 'Elige una fecha y hora futuras para enviar tu solicitud.');
       return;
     }
     let booking: Booking;
     if (backendConfigured && supabase) {
       if (!user) { setPendingBooking(true); setAuthNotice('Inicia sesión para enviar y consultar tus solicitudes.'); setScreen('auth'); return; }
       const { data, error } = await supabase.from('bookings').insert({ client_id: user.id, space_id: selected.id, local_date: selectedDate, local_time: selectedTime, unit, quantity }).select('*').single();
-      if (error) { Alert.alert('No se pudo enviar la solicitud', error.message); return; }
+      if (error) { showMessage('No se pudo enviar la solicitud', error.message); return; }
       booking = mapBooking(data as BookingRow);
     } else {
       booking = { id: `OF-${Date.now().toString().slice(-6)}`, spaceId: selected.id, date: selectedDate, time: selectedTime, unit, quantity, total: selected.rate[unit] * quantity, status: 'Solicitud enviada' };
@@ -210,16 +200,13 @@ function AppContent() {
     }
   };
 
-  const confirmSignOut = () => Alert.alert('Cerrar sesión', '¿Quieres salir de tu cuenta de Oficia?', [
-    { text: 'Cancelar', style: 'cancel' },
-    { text: 'Cerrar sesión', style: 'destructive', onPress: () => {
-      void (async () => {
-        const { error } = await supabase?.auth.signOut() ?? { error: new Error('No hay conexión de autenticación.') };
-        if (error) { Alert.alert('No se pudo cerrar sesión', error.message); return; }
-        setPendingBooking(false); setAuthMode('entrar'); setAuthNotice(''); setScreen('auth');
-      })();
-    } },
-  ]);
+  const confirmSignOut = async () => {
+    if (!await confirmInBrowser('Cerrar sesión', '¿Quieres salir de tu cuenta de Oficia?')) return;
+    try { await signOutFromGoogle(); } catch { /* Supabase revoca la sesión aunque Google no pueda cerrar su selector. */ }
+    const { error } = await supabase?.auth.signOut() ?? { error: new Error('No hay conexión de autenticación.') };
+    if (error) { showMessage('No se pudo cerrar sesión', error.message); return; }
+    setPendingBooking(false); setAuthMode('entrar'); setAuthNotice(''); setScreen('auth');
+  };
 
   if (!hydrated || (backendConfigured && !authReady)) return <SafeAreaView style={styles.root} edges={['top', 'bottom']}><View style={styles.loading}><Mark size={70} /><Text style={styles.loadingText}>Preparando Oficia…</Text></View></SafeAreaView>;
   return <SafeAreaView style={[styles.root, screen === 'auth' && styles.authScreen]} edges={['top', 'bottom']}><StatusBar barStyle={screen === 'auth' ? 'light-content' : 'dark-content'} backgroundColor={screen === 'auth' ? palette.plum : palette.cream} />

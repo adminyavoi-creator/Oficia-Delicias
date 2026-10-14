@@ -1,8 +1,16 @@
 node_modules/
-.expo/
 dist/
 web-build/
 .env
 .env.local
 .env.*.local
 supabase/.temp/
+android/local.properties
+android/.gradle/
+android/**/build/
+android/app/release/
+*.keystore
+*.jks
+*.p12
+key.properties
+android/upload-key.properties

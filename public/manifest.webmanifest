@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "Oficia · Tu espacio, a tu hora",
+  "short_name": "Oficia",
+  "description": "Oficinas y espacios de trabajo por hora, día o semana en Delicias, Chihuahua.",
+  "lang": "es-MX",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF9F8",
+  "theme_color": "#512D37",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
