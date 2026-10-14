@@ -8,7 +8,7 @@ import { Icon, IconName } from './src/components/Icon';
 import { PrimaryButton, SpaceCard, SpacePhoto } from './src/components/UI';
 import { Booking, Category, Space, Tab, Unit, categories, estimatedEnd, formatDate, formatMoney, isFutureSlot, nextDates, spaces } from './src/data';
 import { palette } from './src/theme';
-import { backendConfigured, BookingRow, databaseStatus, googleAuthConfigured, mapBooking, mapSpace, SpaceRow, supabase } from './src/backend';
+import { backendConfigured, BookingRow, databaseStatus, mapBooking, mapSpace, SpaceRow, supabase } from './src/backend';
 import { signInWithGoogle } from './src/googleAuth';
 
 type Screen = 'welcome' | 'tabs' | 'detail' | 'booking' | 'receipt' | 'host' | 'auth';
@@ -33,6 +33,7 @@ function AppContent() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [catalog, setCatalog] = useState(spaces);
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(!backendConfigured);
   const [hostSpaceIds, setHostSpaceIds] = useState<string[]>([]);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -73,7 +74,7 @@ function AppContent() {
         if (!active) return;
         if (savedFavorites) { const parsed: unknown = JSON.parse(savedFavorites); if (Array.isArray(parsed)) setFavorites(parsed.filter((item): item is string => typeof item === 'string')); }
         if (!backendConfigured && savedBookings) { const parsed: unknown = JSON.parse(savedBookings); if (Array.isArray(parsed)) setBookings(parsed.filter((item): item is Booking => typeof item === 'object' && item !== null && 'spaceId' in item && 'id' in item)); }
-        if (seenWelcome === 'yes') setScreen('tabs');
+        if (!backendConfigured && seenWelcome === 'yes') setScreen('tabs');
       }).catch(() => {}).finally(() => { if (active) setHydrated(true); });
     if (supabase) {
       Promise.resolve(supabase.from('spaces').select('*').eq('is_published', true).order('created_at', { ascending: true }))
@@ -83,17 +84,21 @@ function AppContent() {
           if (data?.length) setCatalog((data as SpaceRow[]).map(mapSpace));
         }).catch(() => { if (active) setDataNotice('Mostrando espacios de demostración mientras se restablece la conexión.'); });
       supabase.auth.getSession().then(({ data, error }) => {
-        if (!active || error) return;
-        const session = data.session;
+        if (!active) return;
+        setAuthReady(true);
+        const session = error ? null : data.session;
         setUser(session?.user ?? null);
+        setScreen(session ? 'tabs' : 'auth');
+        if (error) setAuthNotice('No pudimos validar tu sesión. Inicia sesión para continuar.');
         if (session) refreshRemoteData(session.user.id).catch(() => setDataNotice('No se pudieron actualizar tus solicitudes. Desliza para volver a intentarlo.'));
-      });
+      }).catch(() => { if (active) { setAuthReady(true); setScreen('auth'); setAuthNotice('No pudimos validar tu sesión. Inicia sesión para continuar.'); } });
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session: Session | null) => {
         setUser(session?.user ?? null);
         if (session) {
           refreshRemoteData(session.user.id).catch(() => setDataNotice('No se pudieron actualizar tus solicitudes.'));
         } else {
           setBookings([]); setHostSpaceIds([]);
+          if (backendConfigured && _event === 'SIGNED_OUT') { setPendingBooking(false); setScreen('auth'); }
         }
       });
       return () => { active = false; subscription.unsubscribe(); };
@@ -111,6 +116,12 @@ function AppContent() {
       setAuthNotice('');
     }
   }, [user, screen, pendingBooking]);
+  useEffect(() => {
+    if (backendConfigured && authReady && !user && screen !== 'auth') {
+      setPendingBooking(false);
+      setScreen('auth');
+    }
+  }, [authReady, user, screen]);
   const toggleFavorite = (id: string) => setFavorites(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
   const openSpace = (space: Space) => { setSelected(space); setDetailSection('Acerca de'); setScreen('detail'); };
   const openBooking = () => {
@@ -187,9 +198,43 @@ function AppContent() {
     }
   };
 
-  if (!hydrated) return <SafeAreaView style={styles.root} edges={['top', 'bottom']}><View style={styles.loading}><Mark size={70} /><Text style={styles.loadingText}>Preparando Oficia…</Text></View></SafeAreaView>;
+  const confirmSignOut = () => Alert.alert('Cerrar sesión', '¿Quieres salir de tu cuenta de Oficia?', [
+    { text: 'Cancelar', style: 'cancel' },
+    { text: 'Cerrar sesión', style: 'destructive', onPress: () => {
+      void (async () => {
+        const { error } = await supabase?.auth.signOut() ?? { error: new Error('No hay conexión de autenticación.') };
+        if (error) { Alert.alert('No se pudo cerrar sesión', error.message); return; }
+        setPendingBooking(false); setAuthMode('entrar'); setAuthNotice(''); setScreen('auth');
+      })();
+    } },
+  ]);
+
+  if (!hydrated || (backendConfigured && !authReady)) return <SafeAreaView style={styles.root} edges={['top', 'bottom']}><View style={styles.loading}><Mark size={70} /><Text style={styles.loadingText}>Preparando Oficia…</Text></View></SafeAreaView>;
   return <SafeAreaView style={styles.root} edges={['top', 'bottom']}><StatusBar barStyle="dark-content" backgroundColor={palette.cream} />
-    {screen === 'auth' && <ScrollView style={styles.flex} contentContainerStyle={styles.authContent} keyboardShouldPersistTaps="handled"><View style={styles.innerHeader}><Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={() => { setPendingBooking(false); setScreen(pendingBooking ? 'detail' : 'tabs'); }} style={styles.roundBack}><Icon name="back" size={19} /></Pressable><Brand compact /><View style={{ width: 38 }} /></View><View style={styles.authCard}><Text style={styles.pageEyebrow}>{authMode === 'entrar' ? 'QUÉ BUENO VERTE' : 'ÚNETE A OFICIA'}</Text><Text style={styles.pageTitle}>{authMode === 'entrar' ? 'Inicia sesión' : 'Crea tu cuenta'}</Text><Text style={styles.pageSubtitle}>Guarda tus solicitudes y consulta sus cambios desde cualquier dispositivo.</Text>{googleAuthConfigured ? <><Pressable accessibilityRole="button" accessibilityLabel="Continuar con Google" disabled={authBusy} onPress={submitGoogleAuth} style={[styles.googleButton, authBusy && styles.googleButtonDisabled]}><Text style={styles.googleMark}>G</Text><Text style={styles.googleButtonText}>{authBusy ? 'Conectando…' : 'Continuar con Google'}</Text></Pressable><View style={styles.authDivider}><View style={styles.authDividerLine} /><Text style={styles.authDividerText}>o con tu correo</Text><View style={styles.authDividerLine} /></View></> : null}<Text style={styles.authLabel}>Correo electrónico</Text><TextInput autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" value={authEmail} onChangeText={setAuthEmail} placeholder="tu@correo.com" placeholderTextColor="#9B8990" style={styles.authInput} /><Text style={styles.authLabel}>Contraseña</Text><TextInput autoCapitalize="none" autoComplete={authMode === 'crear' ? 'new-password' : 'current-password'} secureTextEntry textContentType={authMode === 'crear' ? 'newPassword' : 'password'} value={authPassword} onChangeText={setAuthPassword} placeholder="Al menos 8 caracteres" placeholderTextColor="#9B8990" style={styles.authInput} onSubmitEditing={submitAuth} /><PrimaryButton label={authBusy ? 'Un momento…' : authMode === 'entrar' ? 'Iniciar sesión' : 'Crear cuenta'} onPress={submitAuth} disabled={authBusy} style={{ marginTop: 20 }} />{authNotice ? <Text accessibilityRole="alert" style={styles.authNotice}>{authNotice}</Text> : null}<Pressable accessibilityRole="button" onPress={() => { setAuthMode(mode => mode === 'entrar' ? 'crear' : 'entrar'); setAuthNotice(''); }} style={styles.authSwitch}><Text style={styles.authSwitchText}>{authMode === 'entrar' ? '¿Primera vez en Oficia? Crea una cuenta' : '¿Ya tienes cuenta? Inicia sesión'}</Text></Pressable><Text style={styles.authFootnote}>La cuenta permite consultar solicitudes. No se realizan cobros desde la app.</Text></View></ScrollView>}
+    {screen === 'auth' && <ScrollView style={styles.flex} contentContainerStyle={styles.authContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <View style={styles.authHero}>
+        <View style={styles.authDecorOne} /><View style={styles.authDecorTwo} />
+        {pendingBooking ? <Pressable accessibilityRole="button" accessibilityLabel="Volver al espacio" onPress={() => { setPendingBooking(false); setAuthNotice(''); setScreen('detail'); }} style={styles.authBack}><Icon name="back" color={palette.white} size={19} /><Text style={styles.authBackText}>Volver al espacio</Text></Pressable> : null}
+        <View style={styles.authHeroBrand}><View style={styles.authLogoFrame}><Mark size={46} /></View><View><Text style={styles.authBrandName}>Oficia</Text><Text style={styles.authBrandTag}>TU ESPACIO, A TU HORA</Text></View></View>
+        <View style={styles.authHeroCopy}><View style={styles.authLocation}><Icon name="pin" size={13} color={palette.white} /><Text style={styles.authLocationText}>DELICIAS, CHIHUAHUA</Text></View><Text style={styles.authHeroTitle}>Un buen lugar{ '\n' }lo cambia todo.</Text><Text style={styles.authHeroSubtitle}>Oficinas, reuniones y coworking listos para ti.</Text></View>
+        <View style={styles.authBenefits}><View style={styles.authBenefit}><Icon name="wifi" size={15} color={palette.white} /><Text style={styles.authBenefitText}>Internet</Text></View><View style={styles.authBenefit}><Icon name="lock" size={15} color={palette.white} /><Text style={styles.authBenefitText}>Privacidad</Text></View><View style={styles.authBenefit}><Icon name="clock" size={15} color={palette.white} /><Text style={styles.authBenefitText}>A tu hora</Text></View></View>
+      </View>
+      <View style={[styles.authCard, styles.authCardResponsive]}>
+        <Text style={styles.authCardEyebrow}>{authMode === 'entrar' ? 'QUÉ BUENO VERTE' : 'HAZ ESPACIO PARA TUS IDEAS'}</Text>
+        <Text style={styles.authCardTitle}>{authMode === 'entrar' ? 'Inicia sesión' : 'Crea tu cuenta'}</Text>
+        <Text style={styles.authCardSubtitle}>Guarda tus solicitudes y consúltalas desde cualquier dispositivo.</Text>
+        {backendConfigured ? <><Pressable accessibilityRole="button" accessibilityLabel="Continuar con Google" disabled={authBusy} onPress={submitGoogleAuth} style={[styles.googleButton, authBusy && styles.googleButtonDisabled]}><Text style={styles.googleMark}>G</Text><Text style={styles.googleButtonText}>{authBusy ? 'Conectando…' : 'Continuar con Google'}</Text></Pressable><View style={styles.authDivider}><View style={styles.authDividerLine} /><Text style={styles.authDividerText}>o con tu correo</Text><View style={styles.authDividerLine} /></View></> : null}
+        <Text style={styles.authLabel}>Correo electrónico</Text>
+        <View style={styles.authInputRow}><Icon name="user" size={18} color={palette.muted} /><TextInput autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" value={authEmail} onChangeText={setAuthEmail} placeholder="tu@correo.com" placeholderTextColor="#9B8990" style={styles.authInputField} returnKeyType="next" /></View>
+        <Text style={styles.authLabel}>Contraseña</Text>
+        <View style={styles.authInputRow}><Icon name="lock" size={18} color={palette.muted} /><TextInput autoCapitalize="none" autoComplete={authMode === 'crear' ? 'new-password' : 'current-password'} secureTextEntry textContentType={authMode === 'crear' ? 'newPassword' : 'password'} value={authPassword} onChangeText={setAuthPassword} placeholder="Al menos 8 caracteres" placeholderTextColor="#9B8990" style={styles.authInputField} onSubmitEditing={submitAuth} returnKeyType="go" /></View>
+        <PrimaryButton label={authBusy ? 'Un momento…' : authMode === 'entrar' ? 'Iniciar sesión' : 'Crear cuenta'} onPress={submitAuth} disabled={authBusy} style={{ marginTop: 20 }} />
+        {authNotice ? <Text accessibilityRole="alert" style={styles.authNotice}>{authNotice}</Text> : null}
+        <Pressable accessibilityRole="button" onPress={() => { setAuthMode(mode => mode === 'entrar' ? 'crear' : 'entrar'); setAuthNotice(''); }} style={styles.authSwitch}><Text style={styles.authSwitchText}>{authMode === 'entrar' ? '¿Primera vez en Oficia? Crea una cuenta' : '¿Ya tienes cuenta? Inicia sesión'}</Text></Pressable>
+        <View style={styles.authPrivacy}><Icon name="lock" size={14} color={palette.action} /><Text style={styles.authFootnote}>Tus solicitudes quedan vinculadas a tu cuenta. No se realizan cobros desde la app.</Text></View>
+      </View>
+      <View style={styles.authFooter}><Text style={styles.authFooterText}>Encuentra tu espacio. Enfócate en lo que sigue.</Text></View>
+    </ScrollView>}
     {screen === 'welcome' && <ScrollView style={styles.flex} contentContainerStyle={styles.welcome} showsVerticalScrollIndicator={false}>
       <View style={styles.welcomeArt}><View style={styles.welcomeCircle} /><View style={styles.welcomePhotoWrap}><SpacePhoto uri={catalog[0].image} label="Espacio de trabajo luminoso" style={styles.welcomePhoto} /></View><View style={styles.welcomeMark}><Mark size={48} /></View></View>
       <View style={styles.welcomeBottom}><Brand /><Text style={styles.welcomeTitle}>Tu mejor trabajo{ '\n'}merece un gran lugar.</Text><Text style={styles.welcomeText}>Oficinas, salas y coworking listos para ti en Delicias y sus alrededores. Reserva desde una hora.</Text><PrimaryButton label="Explorar espacios" onPress={() => { setScreen('tabs'); AsyncStorage.setItem('oficia:welcome', 'yes').catch(() => {}); }} style={{ marginTop: 27 }} /><Text style={styles.demoNote}>Explora la versión de demostración</Text></View>
@@ -217,7 +262,7 @@ function AppContent() {
         return <Pressable key={booking.id} onPress={() => { setLatestBooking(booking); setScreen('receipt'); }} style={styles.reservationCard}><View style={styles.reservationStatus}><Icon name={booking.status === "Confirmada" ? "check" : booking.status === "Rechazada" ? "close" : "clock"} size={15} color={palette.action} /><Text style={styles.reservationStatusText}>{booking.status}</Text><Text style={styles.reservationId}>{booking.id}</Text></View><View style={styles.reservationBody}><SpacePhoto uri={space.image} label={`Fotografía de ${space.name}`} style={styles.reservationPhoto} /><View style={styles.reservationInfo}><Text style={styles.reservationName}>{space.name}</Text><Text style={styles.reservationMeta}>{space.area}</Text><Text style={styles.reservationMeta}>{formatDate(booking.date)} · {booking.time}</Text><Text style={styles.reservationPrice}>{formatMoney(booking.total)}</Text></View></View></Pressable>;
       }) : <EmptyState icon="calendar" title="Aún no tienes reservas" message="Encuentra tu espacio y envía una solicitud. El anfitrión confirmará la disponibilidad." action="Explorar espacios" onAction={() => chooseTab('Explorar')} />}</View>}
 
-      {tab === 'Perfil' && <View style={styles.padded}><PageHeader eyebrow="BIENVENIDO" title="Tu perfil" subtitle="Todo para trabajar a tu manera." /><View style={styles.profileCard}><View style={styles.profileAvatar}><Icon name="user" size={29} color={palette.action} /></View><View><Text style={styles.profileTitle}>{user?.email ?? 'Explorador de espacios'}</Text><Text style={styles.profileMeta}>{user ? 'Cuenta Oficia' : 'Delicias, Chihuahua'}</Text></View></View><Text style={styles.sectionTitle}>Acerca de Oficia</Text><Text style={styles.bodyCopy}>Encuentra oficinas privadas, salas de juntas y espacios de coworking equipados cerca de ti. Elige el tiempo que necesitas y envía tu solicitud en minutos.</Text><Pressable accessibilityRole="button" accessibilityLabel="Abrir panel de anfitrión" onPress={() => { if (backendConfigured && !user) { setPendingBooking(false); setAuthNotice('Inicia sesión para abrir el panel de anfitrión.'); setScreen('auth'); } else { setScreen('host'); if (user) refreshRemoteData(user.id).catch(() => setDataNotice('No se pudieron actualizar tus solicitudes.')); } }} style={styles.hostEntry}><View style={styles.hostEntryIcon}><Icon name="briefcase" size={23} color={palette.action} /></View><View style={styles.flex}><Text style={styles.hostEntryTitle}>Panel de anfitrión</Text><Text style={styles.hostEntryText}>{backendConfigured ? 'Solicitudes de tus espacios asignados' : 'Revisa solicitudes de muestra'}</Text></View><Icon name="arrow" size={19} color={palette.action} /></Pressable><View style={styles.profileInfo}><Icon name="info" size={22} color={palette.action} /><View style={styles.flex}><Text style={styles.profileInfoTitle}>{backendConfigured ? 'Catálogo de demostración' : 'Versión de demostración'}</Text><Text style={styles.profileInfoText}>{backendConfigured ? 'Los espacios, fotos y precios actuales son ilustrativos. Las solicitudes enviadas quedan guardadas en tu cuenta y no generan cobro.' : 'Las fotos, los espacios y los precios son ilustrativos. Las solicitudes de este dispositivo se guardan localmente.'}</Text></View></View>{backendConfigured ? <Pressable accessibilityRole="button" onPress={() => { if (user) supabase?.auth.signOut(); else { setPendingBooking(false); setAuthNotice(''); setScreen('auth'); } }} style={styles.authSwitch}><Text style={styles.authSwitchText}>{user ? 'Cerrar sesión' : 'Iniciar sesión o crear cuenta'}</Text></Pressable> : null}<View style={styles.profileBrand}><Brand /></View></View>}
+      {tab === 'Perfil' && <View style={styles.padded}><PageHeader eyebrow="BIENVENIDO" title="Tu perfil" subtitle="Todo para trabajar a tu manera." /><View style={styles.profileCard}><View style={styles.profileAvatar}><Icon name="user" size={29} color={palette.action} /></View><View><Text style={styles.profileTitle}>{user?.email ?? 'Explorador de espacios'}</Text><Text style={styles.profileMeta}>{user ? 'Cuenta Oficia' : 'Delicias, Chihuahua'}</Text></View></View><Text style={styles.sectionTitle}>Acerca de Oficia</Text><Text style={styles.bodyCopy}>Encuentra oficinas privadas, salas de juntas y espacios de coworking equipados cerca de ti. Elige el tiempo que necesitas y envía tu solicitud en minutos.</Text><Pressable accessibilityRole="button" accessibilityLabel="Abrir panel de anfitrión" onPress={() => { if (backendConfigured && !user) { setPendingBooking(false); setAuthNotice('Inicia sesión para abrir el panel de anfitrión.'); setScreen('auth'); } else { setScreen('host'); if (user) refreshRemoteData(user.id).catch(() => setDataNotice('No se pudieron actualizar tus solicitudes.')); } }} style={styles.hostEntry}><View style={styles.hostEntryIcon}><Icon name="briefcase" size={23} color={palette.action} /></View><View style={styles.flex}><Text style={styles.hostEntryTitle}>Panel de anfitrión</Text><Text style={styles.hostEntryText}>{backendConfigured ? 'Solicitudes de tus espacios asignados' : 'Revisa solicitudes de muestra'}</Text></View><Icon name="arrow" size={19} color={palette.action} /></Pressable><View style={styles.profileInfo}><Icon name="info" size={22} color={palette.action} /><View style={styles.flex}><Text style={styles.profileInfoTitle}>{backendConfigured ? 'Catálogo de demostración' : 'Versión de demostración'}</Text><Text style={styles.profileInfoText}>{backendConfigured ? 'Los espacios, fotos y precios actuales son ilustrativos. Las solicitudes enviadas quedan guardadas en tu cuenta y no generan cobro.' : 'Las fotos, los espacios y los precios son ilustrativos. Las solicitudes de este dispositivo se guardan localmente.'}</Text></View></View>{backendConfigured ? <Pressable accessibilityRole="button" accessibilityLabel={user ? 'Cerrar sesión' : 'Iniciar sesión'} onPress={() => { if (user) confirmSignOut(); else { setPendingBooking(false); setAuthNotice(''); setScreen('auth'); } }} style={styles.signOutButton}><View style={styles.signOutIcon}><Icon name={user ? 'power' : 'user'} size={19} color={palette.action} /></View><View style={styles.flex}><Text style={styles.signOutTitle}>{user ? 'Cerrar sesión' : 'Iniciar sesión'}</Text><Text style={styles.signOutCaption}>{user ? 'Salir de tu cuenta de forma segura' : 'Accede a tus reservas y espacios favoritos'}</Text></View><Icon name="arrow" size={17} color={palette.action} /></Pressable> : null}<View style={styles.profileBrand}><Brand /></View></View>}
     </ScrollView><TabBar active={tab} onChange={chooseTab} /></>}
 
     {screen === 'detail' && selected && <><ScrollView style={styles.flex} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 116 }}><View style={styles.detailHero}><SpacePhoto uri={selected.image} label={`Fotografía principal de ${selected.name}`} style={styles.heroPhoto} /><Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={goBack} style={[styles.heroButton, { left: 18 }]}><Icon name="back" color={palette.plum} size={20} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel={favoriteIds.has(selected.id) ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={() => toggleFavorite(selected.id)} style={[styles.heroButton, { right: 18 }]}><Icon name="heart" color={favoriteIds.has(selected.id) ? palette.action : palette.plum} filled={favoriteIds.has(selected.id)} size={21} /></Pressable><View style={styles.heroThumbs}>{selected.gallery.slice(0, 3).map((uri, index) => <SpacePhoto key={uri} uri={uri} label={`Fotografía ${index + 1} de ${selected.name}`} style={styles.heroThumb} />)}</View></View><View style={styles.detailBody}><View style={styles.detailTop}><Text style={styles.detailType}>{selected.category.toUpperCase()}</Text><View style={styles.ratingDetail}><Icon name="star" size={16} color={palette.gold} filled /><Text style={styles.ratingDetailText}>{selected.rating} ({selected.reviewCount} opiniones)</Text></View></View><Text style={styles.detailName}>{selected.name}</Text><View style={styles.locationLine}><Icon name="pin" size={16} color={palette.action} /><Text style={styles.detailArea}>{selected.area}, Chihuahua</Text></View><View style={styles.detailStats}><Stat icon="users" text={`Hasta ${selected.capacity} ${selected.capacity === 1 ? 'persona' : 'personas'}`} /><Stat icon="clock" text="Desde 1 hora" /><Stat icon="lock" text={selected.category === 'Coworking' ? 'Área común' : 'Privacidad'} /></View><View style={styles.detailTabs}>{(['Acerca de', 'Galería', 'Opiniones'] as DetailSection[]).map(section => <Pressable key={section} accessibilityRole="tab" accessibilityState={{ selected: detailSection === section }} onPress={() => setDetailSection(section)} style={[styles.detailTab, detailSection === section && styles.detailTabActive]}><Text style={[styles.detailTabText, detailSection === section && styles.detailTabTextActive]}>{section}</Text></Pressable>)}</View>
@@ -271,7 +316,41 @@ function ReceiptItem({ label, value }: { label: string; value: string }) {
 
 export default function App() { return <SafeAreaProvider><AppContent /></SafeAreaProvider>; }
 
+const authScreenStyles = StyleSheet.create({
+  authHero: { backgroundColor: palette.coral, borderRadius: 28, paddingHorizontal: 21, paddingTop: 21, paddingBottom: 18, minHeight: 318, overflow: 'hidden', maxWidth: 520, width: '100%', alignSelf: 'center' },
+  authDecorOne: { position: 'absolute', top: -72, right: -38, width: 190, height: 190, borderRadius: 95, backgroundColor: '#FFFFFF1C' },
+  authDecorTwo: { position: 'absolute', right: 43, top: 57, width: 82, height: 82, borderRadius: 41, borderWidth: 1, borderColor: '#FFFFFF35' },
+  authBack: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 5, marginBottom: 14, paddingVertical: 5 },
+  authBackText: { color: palette.white, fontSize: 12, fontWeight: '800' },
+  authHeroBrand: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  authLogoFrame: { width: 60, height: 60, borderRadius: 19, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center' },
+  authBrandName: { color: palette.white, fontSize: 27, lineHeight: 30, fontWeight: '900', letterSpacing: -1 },
+  authBrandTag: { color: palette.white, fontSize: 8, fontWeight: '900', letterSpacing: 1.2, marginTop: 2 },
+  authHeroCopy: { marginTop: 25 },
+  authLocation: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  authLocationText: { color: palette.white, fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
+  authHeroTitle: { color: palette.white, fontSize: 29, lineHeight: 34, fontWeight: '900', letterSpacing: -.7, marginTop: 10 },
+  authHeroSubtitle: { color: '#FFFFFFE8', fontSize: 12, lineHeight: 18, marginTop: 7 },
+  authBenefits: { flexDirection: 'row', gap: 8, marginTop: 19 },
+  authBenefit: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFFFFF26', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 8 },
+  authBenefitText: { color: palette.white, fontSize: 10, fontWeight: '800' },
+  authCardEyebrow: { color: palette.action, fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
+  authCardResponsive: { width: '100%', maxWidth: 520, alignSelf: 'center', marginTop: -22 },
+  authCardTitle: { color: palette.plum, fontSize: 25, lineHeight: 30, fontWeight: '900', marginTop: 7 },
+  authCardSubtitle: { color: palette.muted, fontSize: 12, lineHeight: 18, marginTop: 6 },
+  authInputRow: { minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 13, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.cream, paddingHorizontal: 13 },
+  authInputField: { flex: 1, minHeight: 48, color: palette.plum, fontSize: 14, paddingVertical: 8 },
+  authPrivacy: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 2 },
+  authFooter: { alignItems: 'center', paddingTop: 17, paddingBottom: 5 },
+  authFooterText: { color: palette.muted, fontSize: 10, textAlign: 'center' },
+  signOutButton: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 14, paddingVertical: 13, borderRadius: 16, marginTop: 22 },
+  signOutIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.blush },
+  signOutTitle: { color: palette.plum, fontSize: 13, fontWeight: '900' },
+  signOutCaption: { color: palette.muted, fontSize: 10, marginTop: 4 },
+});
+
 const styles = StyleSheet.create({
+  ...authScreenStyles,
   authContent: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 15, paddingBottom: 35 }, authCard: { backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line, borderRadius: 23, padding: 22, marginTop: 20 }, authLabel: { color: palette.plum, fontSize: 12, fontWeight: '800', marginTop: 20, marginBottom: 8 }, authInput: { height: 50, borderRadius: 13, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.cream, paddingHorizontal: 14, color: palette.plum, fontSize: 14 }, googleButton: { height: 52, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.white, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 11, marginTop: 23 }, googleButtonDisabled: { opacity: .58 }, googleMark: { color: '#4285F4', fontSize: 19, fontWeight: '900' }, googleButtonText: { color: palette.plum, fontSize: 13, fontWeight: '800' }, authDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 19 }, authDividerLine: { flex: 1, height: 1, backgroundColor: palette.line }, authDividerText: { color: palette.muted, fontSize: 10 }, authNotice: { color: palette.action, fontSize: 12, lineHeight: 18, marginTop: 15 }, authSwitch: { alignItems: 'center', paddingVertical: 17, marginTop: 5 }, authSwitchText: { color: palette.action, fontSize: 12, fontWeight: '800', textAlign: 'center' }, authFootnote: { color: palette.muted, fontSize: 10, textAlign: 'center', lineHeight: 16 }, dataNotice: { flexDirection: 'row', gap: 9, alignItems: 'center', backgroundColor: palette.blush, borderRadius: 12, padding: 12, marginHorizontal: 20, marginTop: 14 }, dataNoticeText: { flex: 1, color: palette.plum, fontSize: 11, lineHeight: 16 },
   root: { flex: 1, backgroundColor: palette.cream }, flex: { flex: 1 }, screenContent: { paddingBottom: 25 }, padded: { paddingHorizontal: 20 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 13 }, loadingText: { color: palette.plum, fontSize: 14, fontWeight: '800' },
