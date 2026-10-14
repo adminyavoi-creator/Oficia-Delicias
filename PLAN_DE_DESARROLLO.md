@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** la app conecta el catálogo, el acceso por correo y las solicitudes a Supabase con RLS; esa versión ya se desplegó desde `main` en Vercel. Google Auth está habilitado y el acceso web ya se probó con `admin.yavoi@gmail.com`; la misma identidad se comparte con Android, cuya prueba nativa requiere un development build. La cuenta anfitriona ya existe y está vinculada a los cuatro espacios de muestra. El inventario continúa siendo demostrativo.
+**Estado actual (14 de octubre de 2026):** la app conecta el catálogo, el acceso por correo y las solicitudes a Supabase con RLS; esa versión ya se desplegó desde `main` en Vercel. El login ahora aparece al abrir cuando no hay sesión, conserva sesiones válidas y ofrece cierre de sesión desde Perfil. Google Auth está habilitado y el acceso web ya se probó con `admin.yavoi@gmail.com`; la app Android tiene `expo-dev-client` y perfiles EAS para desarrollo, prueba y producción. Los tipos y las exportaciones web/Android pasan; falta iniciar sesión en Expo/EAS, generar la APK nativa y agregar su huella SHA-1 a Google Cloud. La cuenta anfitriona ya existe y está vinculada a los cuatro espacios de muestra. El inventario continúa siendo demostrativo.
 
 ## Objetivo
 
@@ -17,7 +17,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 5. Favoritos, reservas y perfil | Completada | Secciones funcionales del prototipo | Guardar favoritos y consultar solicitudes durante la sesión |
 | 6. Filtros y datos locales | Completada | Filtro por capacidad/servicios y almacenamiento en el dispositivo | Favoritos y solicitudes se recuperan al abrir la app |
 | 7. Panel de anfitrión de demostración | Completada | Vista de solicitudes y cambio de estado local | Confirmar o rechazar una solicitud en el mismo dispositivo |
-| 8. Verificación | En curso | Tipos, compilación y recorrido en dispositivo | Tipos y compilación web correctos; prueba visual/nativa pendiente |
+| 8. Verificación | En curso | Tipos, compilación y recorrido en dispositivo | Tipos y exportaciones web/Android correctas; vista web verificada; prueba Android nativa pendiente |
 | 9. Diseño de conexión real | Completada | `ARQUITECTURA_BACKEND.md` | Flujo cliente–anfitrión, datos y permisos definidos |
 
 ## Fase 2 · Antes del lanzamiento
@@ -26,7 +26,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | --- | --- | --- |
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
 | Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | Cuenta anfitriona creada y asociada a los espacios de muestra; falta probar el flujo con una segunda cuenta cliente y validar políticas RLS |
-| Acceso con Google en web y Android | En curso | Proveedor habilitado; acceso web verificado. Falta development build Android y huella de firma de publicación cuando exista |
+| Pantalla inicial de acceso y cierre de sesión | Completada | Login coral de Oficia al abrir sin sesión; sesión persistente; salida confirmada desde Perfil |
+| Acceso con Google en web y Android | En curso | Proveedor habilitado; acceso web verificado. El botón aparece cuando Supabase está configurado. Perfil EAS listo; falta sesión EAS para generar la APK y registrar su SHA-1 |
 | Proyecto Vercel y frontend web | Completada | `oficia-delicias.vercel.app`, desplegado desde `main` en el equipo Yavoi Alonso |
 | Disponibilidad, horarios y confirmación real del anfitrión | Pendiente | Reglas de operación y calendario |
 | Pagos, cancelaciones y facturación | Pendiente | Proveedor de pagos y políticas comerciales |
@@ -88,6 +89,9 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Corrección de retorno OAuth | La primera prueba mostró que el URL principal de Supabase aún apuntaba a `localhost:3000`. Se cambió a producción y se agregaron retornos explícitos para producción y desarrollo (`localhost:8081`). Supabase confirmó que guardó ambos URLs. |
 | 14 oct 2026 | Prueba web y cuenta anfitriona | Con autorización del usuario, Google inició sesión en Oficia con `admin.yavoi@gmail.com`. La app mostró la cuenta activa; Supabase creó el usuario. Se verificó el panel de anfitrión y se asociaron los cuatro espacios de muestra a `spaces.host_id`; el panel muestra 0 solicitudes hasta que un cliente cree una. |
 | 14 oct 2026 | Publicación de la fase administrativa | El plan con el portal profesional quedó publicado en `main` como commit `cc0e39f`; Vercel confirmó ese despliegue en estado Ready. |
+| 14 oct 2026 | Login inicial y salida desde Perfil | El inicio exige una sesión cuando Supabase está configurado, restaura la sesión válida al reabrir y muestra una salida con confirmación en Perfil. Se validaron tipos y exportaciones web/Android. |
+| 14 oct 2026 | Pulido visual del acceso | Portada coral de Oficia con ubicación, beneficios, formulario y acceso Google; la vista web muestra el botón de Google cuando Supabase está configurado. Tipo, exportación web y paquete JS Android verificados; preview web revisado. |
+| 14 oct 2026 | Preparación de compilación Android nativa | Se instaló `expo-dev-client` compatible con Expo SDK 54 y se añadió `eas.json` con APK de desarrollo/prueba y AAB de producción. La exportación Android no genera una APK. `npx eas-cli whoami` confirmó que no hay sesión EAS en este equipo y no hay JDK/Android SDK local; proyecto EAS, APK y su SHA-1 siguen pendientes. |
 
 ## Correspondencia con los mockups
 
@@ -107,8 +111,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 ## Próximo paso concreto
 
 1. Probar cliente y anfitrión con cuentas distintas, enviar una solicitud de prueba controlada y validar las políticas RLS y el cambio de estado desde el panel.
-2. Crear una compilación Android de desarrollo y comprobar el selector nativo con `admin.yavoi@gmail.com`; agregar la huella de firma de publicación/EAS cuando exista.
-4. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar migraciones con la CLI; recibir inventario real y preparar Play Console.
+2. Iniciar sesión en Expo/EAS en este equipo con `npx eas-cli login`; después generar la APK Android de desarrollo, probar Google nativo y registrar la SHA-1 de EAS en Google Cloud.
+3. Registrar en el historial remoto que `20261014191029_initial_oficia.sql` ya se aplicó desde SQL Editor antes de administrar migraciones con la CLI; recibir inventario real y preparar Play Console.
 
 ## Fase final · Portal profesional de administración de Oficia
 
