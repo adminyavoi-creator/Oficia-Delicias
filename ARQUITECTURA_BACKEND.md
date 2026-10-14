@@ -1,6 +1,6 @@
 # Conexión real de Oficia · diseño de datos
 
-**Estado:** esquema inicial implementado en el proyecto Supabase `vfvqmlsgqxiarmbquhco`. La app aún funciona con datos locales de demostración; falta conectar Auth y las consultas del cliente.
+**Estado:** el esquema está aplicado en `vfvqmlsgqxiarmbquhco`; el cliente de Expo ya consulta `spaces`, usa Auth por correo y escribe/lee `bookings` bajo RLS. El panel filtra solicitudes a espacios del anfitrión. El catálogo sigue siendo ilustrativo y los espacios de muestra todavía no tienen cuenta anfitriona asignada.
 
 ## Flujo acordado
 
@@ -40,13 +40,14 @@ Las pantallas y modelos locales de `src/data.ts` sirven como referencia visual. 
 
 1. Configurar Auth y las tablas con migraciones versionadas.
 2. Cargar los cuatro espacios de muestra **marcados como demostración** para probar el flujo entre dos cuentas de prueba.
-3. Sustituir lectura local del catálogo por consultas; mantener un estado de carga, error y sin conexión.
-4. Sustituir la creación local de solicitudes por una operación del servidor.
-5. Proteger el panel de anfitrión y sincronizar cambios de estado en las reservas del cliente.
-6. Probar permisos con una cuenta cliente, dos anfitriones distintos y solicitudes solapadas antes de añadir inventario real.
+3. La app consulta los espacios publicados al iniciar; conserva el catálogo local si la conexión falla.
+4. El registro/inicio de sesión usa correo y contraseña; las sesiones se conservan en almacenamiento local.
+5. Las solicitudes se escriben en Supabase y la base calcula fecha de salida y total. RLS filtra datos de cliente/anfitrión.
+6. El panel confirma o rechaza mediante una actualización protegida. El rechazo usa una razón predeterminada; los conflictos se validan por trigger.
+7. Vincular al menos una cuenta anfitriona con `spaces.host_id` y probar cliente/anfitrión antes de ofrecer inventario real.
 
 ## Estado de implementación
 
 La migración `supabase/migrations/20261014191029_initial_oficia.sql` crea `spaces` y `bookings`, tarifas enteras en centavos, cálculo de duración en `America/Chihuahua`, validación de cambios de estado, bloqueo de confirmaciones solapadas y políticas RLS. Se aplicó desde SQL Editor en el proyecto existente **Oficia-delicias**, organización `adminyavoi-creator's Org` (Free). Una consulta posterior confirmó cuatro espacios de muestra, cero reservas y RLS activado en ambas tablas.
 
-El esquema es la primera versión operativa. Los perfiles, fotos almacenadas, horarios, historial de solicitudes y reglas comerciales detalladas de la tabla anterior siguen pendientes. Antes de añadir migraciones con la CLI, registrar la migración inicial en el historial remoto para evitar ejecutarla de nuevo.
+El esquema es la primera versión operativa. Los perfiles, fotos almacenadas, horarios, historial de solicitudes y reglas comerciales detalladas de la tabla anterior siguen pendientes. La consulta de historial remoto aún no muestra registrada la migración, aunque las tablas ya están creadas; antes de usar la CLI para otra migración, conciliar ese historial sin volver a ejecutar el SQL inicial. El despliegue debe reconstruirse después de cada cambio de variables de entorno de Vercel.
