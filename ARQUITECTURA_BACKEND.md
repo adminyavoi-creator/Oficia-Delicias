@@ -1,6 +1,6 @@
 # Conexión real de Oficia · diseño de datos
 
-**Estado:** el esquema está aplicado en `vfvqmlsgqxiarmbquhco`; el cliente de Expo ya consulta `spaces`, usa Auth por correo y escribe/lee `bookings` bajo RLS. Google Auth está implementado en Android nativo y web con la identidad compartida de Supabase, pero el proveedor continúa desactivado hasta agregar las credenciales OAuth. El catálogo sigue siendo ilustrativo y los espacios de muestra todavía no tienen cuenta anfitriona asignada.
+**Estado:** el esquema está aplicado en `vfvqmlsgqxiarmbquhco`; el cliente de Expo consulta `spaces`, usa Auth y escribe/lee `bookings` bajo RLS. Google Auth está habilitado para web y Android con una identidad compartida. El acceso web se probó; `admin.yavoi@gmail.com` ya existe como usuario de Supabase y está asignado a los cuatro espacios demostrativos. El development build nativo y la prueba con una segunda cuenta siguen pendientes. El inventario continúa siendo ilustrativo.
 
 ## Flujo acordado
 
@@ -44,14 +44,15 @@ Las pantallas y modelos locales de `src/data.ts` sirven como referencia visual. 
 4. El registro/inicio de sesión admite correo y contraseña. Google en Android usa el selector nativo y `signInWithIdToken`; la web usa OAuth con Supabase. Ambos crean o recuperan el usuario del mismo proveedor. Las sesiones se conservan en almacenamiento local.
 5. Las solicitudes se escriben en Supabase y la base calcula fecha de salida y total. RLS filtra datos de cliente/anfitrión.
 6. El panel confirma o rechaza mediante una actualización protegida. El rechazo usa una razón predeterminada; los conflictos se validan por trigger.
-7. Vincular al menos una cuenta anfitriona con `spaces.host_id` y probar cliente/anfitrión antes de ofrecer inventario real.
+7. Una cuenta anfitriona ya está vinculada con `spaces.host_id` a los cuatro espacios de muestra. Falta probar solicitud y respuesta con una cuenta cliente distinta antes de ofrecer inventario real.
 
-## Configuración pendiente de Google
+## Configuración y verificación de Google
 
-- Registrar en Google Cloud un cliente web y configurar en Supabase Auth → Google el Client ID, Client Secret y URI de retorno `https://vfvqmlsgqxiarmbquhco.supabase.co/auth/v1/callback`.
-- Agregar el Client ID web (es público) a `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` en Vercel y `.env.local`. El botón no se muestra mientras falta esa variable.
-- Crear los clientes Android para `mx.oficia.delicias` con las huellas SHA-1 de desarrollo/EAS y publicación. El acceso nativo no funciona dentro de Expo Go; requiere un development build o EAS Build.
-- No guardar el Client Secret en la app ni en Vercel; únicamente se guarda en la configuración segura de Supabase.
+- Google Cloud tiene clientes web y Android para Oficia. Supabase Auth → Google tiene los IDs configurados, el proveedor habilitado y el callback `https://vfvqmlsgqxiarmbquhco.supabase.co/auth/v1/callback`.
+- La URL principal de Supabase es `https://oficia-delicias.vercel.app`; los retornos permitidos son producción y `http://localhost:8081` para desarrollo local.
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` está configurado en Vercel Production y `.env.local`. El inicio web con `admin.yavoi@gmail.com` terminó correctamente y creó la cuenta en Supabase.
+- El cliente Android de desarrollo existe para `mx.oficia.delicias` con la huella SHA-1 de desarrollo. La prueba nativa requiere development build/EAS; agregar la huella de publicación al preparar Play Console.
+- No guardar el Client Secret en la app ni en Vercel; se conserva únicamente en la configuración segura de Supabase.
 
 ## Estado de implementación
 
