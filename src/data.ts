@@ -34,6 +34,7 @@ export type TransferSettings = {
 export type Booking = {
   id: string;
   remoteId?: string;
+  clientId?: string;
   spaceId: string;
   date: string;
   time: string;

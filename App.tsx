@@ -13,6 +13,7 @@ import { signInWithGoogle, signOutFromGoogle } from './src/googleAuth';
 import { AuthVideoBackground } from './src/components/AuthVideoBackground';
 import { confirmInBrowser, showMessage } from './src/dialogs';
 import { OpenStreetMap } from './src/components/OpenStreetMap';
+import { myBookings as selectMyBookings } from './src/visibility';
 
 type Screen = 'welcome' | 'tabs' | 'detail' | 'booking' | 'receipt' | 'host' | 'operations' | 'auth';
 type DetailSection = 'Acerca de' | 'Galería' | 'Opiniones';
@@ -34,6 +35,7 @@ function AppContent() {
   const [category, setCategory] = useState<Category>('Todos');
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [favoritesOwner, setFavoritesOwner] = useState<string | null>(null);
   const [selected, setSelected] = useState<Space | null>(null);
   const [detailImageIndex, setDetailImageIndex] = useState(0);
   const [detailSection, setDetailSection] = useState<DetailSection>('Acerca de');
@@ -89,6 +91,8 @@ function AppContent() {
     if (hostResult.error) throw hostResult.error;
     if (bookingResult.error) throw bookingResult.error;
     if (operatorResult.error) throw operatorResult.error;
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session?.user.id !== userId) return;
     const ownHostIds = (hostResult.data ?? []).map(row => row.id as string);
     const operator = operatorResult.data === true;
     const visibleBookings = operator ? (bookingResult.data ?? []) : (bookingResult.data ?? []).filter((row: { client_id: string; space_id: string }) => row.client_id === userId || ownHostIds.includes(row.space_id));
@@ -103,7 +107,7 @@ function AppContent() {
   };
   useEffect(() => {
     let active = true;
-    Promise.all([AsyncStorage.getItem('oficia:favorites'), AsyncStorage.getItem('oficia:bookings'), AsyncStorage.getItem('oficia:welcome')])
+    Promise.all([backendConfigured ? Promise.resolve(null) : AsyncStorage.getItem('oficia:favorites'), AsyncStorage.getItem('oficia:bookings'), AsyncStorage.getItem('oficia:welcome')])
       .then(([savedFavorites, savedBookings, seenWelcome]) => {
         if (!active) return;
         if (savedFavorites) { const parsed: unknown = JSON.parse(savedFavorites); if (Array.isArray(parsed)) setFavorites(parsed.filter((item): item is string => typeof item === 'string')); }
@@ -131,7 +135,9 @@ function AppContent() {
         if (session) {
           refreshRemoteData(session.user.id).catch(() => setDataNotice('No se pudieron actualizar tus solicitudes.'));
         } else {
-          setBookings([]); setHostSpaceIds([]);
+          setBookings([]); setHostSpaceIds([]); setIsOperations(false); setLatestBooking(null);
+          setTransferSettings({ bankName: '', clabe: '', beneficiary: '', instructions: '' });
+          setBankDraft({ bankName: '', clabe: '', beneficiary: '', instructions: '' });
           if (backendConfigured && _event === 'SIGNED_OUT') { setPendingBooking(false); setScreen('auth'); }
         }
       });
@@ -139,7 +145,27 @@ function AppContent() {
     }
     return () => { active = false; };
   }, []);
-  useEffect(() => { if (hydrated) AsyncStorage.setItem('oficia:favorites', JSON.stringify(favorites)).catch(() => {}); }, [favorites, hydrated]);
+  useEffect(() => {
+    if (!backendConfigured || !authReady) return;
+    const owner = user?.id ?? null;
+    let active = true;
+    setFavorites([]);
+    setFavoritesOwner(null);
+    if (owner) AsyncStorage.getItem(`oficia:favorites:${owner}`)
+      .then(saved => {
+        if (!active) return;
+        const parsed: unknown = saved ? JSON.parse(saved) : [];
+        setFavorites(Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []);
+      })
+      .catch(() => { if (active) setFavorites([]); })
+      .finally(() => { if (active) setFavoritesOwner(owner); });
+    return () => { active = false; };
+  }, [user?.id, authReady]);
+  useEffect(() => {
+    if (!hydrated) return;
+    const key = backendConfigured ? (user?.id && favoritesOwner === user.id ? `oficia:favorites:${user.id}` : null) : 'oficia:favorites';
+    if (key) AsyncStorage.setItem(key, JSON.stringify(favorites)).catch(() => {});
+  }, [favorites, favoritesOwner, hydrated, user?.id]);
   useEffect(() => { if (hydrated && !backendConfigured) AsyncStorage.setItem('oficia:bookings', JSON.stringify(bookings)).catch(() => {}); }, [bookings, hydrated]);
   useEffect(() => {
     if (user && screen === 'auth') {
@@ -156,7 +182,10 @@ function AppContent() {
       setScreen('auth');
     }
   }, [authReady, user, screen]);
-  const toggleFavorite = (id: string) => setFavorites(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
+  const toggleFavorite = (id: string) => {
+    if (backendConfigured && (!user || favoritesOwner !== user.id)) return;
+    setFavorites(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
+  };
   const openSpace = (space: Space) => { setSelected(space); setDetailImageIndex(0); setDetailSection('Acerca de'); setScreen('detail'); };
   const openBooking = () => {
     if (backendConfigured && !user) { setPendingBooking(true); setAuthNotice('Inicia sesión para enviar y consultar tus solicitudes.'); setScreen('auth'); return; }
@@ -259,7 +288,8 @@ function AppContent() {
     }
     setBookings(current => [booking, ...current]); setLatestBooking(booking); setScreen('receipt');
   };
-  const favoriteIds = new Set(favorites);
+  const favoriteIds = new Set(backendConfigured && favoritesOwner !== user?.id ? [] : favorites);
+  const myBookings = selectMyBookings(bookings, user?.id ?? null, backendConfigured);
   const bookingSpace = latestBooking ? catalog.find(space => space.id === latestBooking.spaceId) : null;
   const hostBookings = backendConfigured ? bookings.filter(item => hostSpaceIds.includes(item.spaceId)) : bookings;
   const depositReady = Boolean(transferSettings.bankName && isValidClabe(transferSettings.clabe) && transferSettings.beneficiary);
@@ -354,9 +384,9 @@ function AppContent() {
 
       {tab === 'Explorar' && <View style={styles.padded}><PageHeader eyebrow="DESCUBRE" title="Explora espacios" subtitle="Encuentra un lugar listo para tu próxima jornada." /><SearchField value={search} onChange={setSearch} onFilters={() => setShowFilters(true)} filterCount={amenityFilter.length + (capacityFilter > 1 ? 1 : 0) + (sortMode !== 'recommended' ? 1 : 0)} /><CategoryRow category={category} onChange={setCategory} /><View style={styles.mapToggle} accessibilityRole="tablist"><Pressable accessibilityRole="tab" accessibilityState={{ selected: !mapVisible }} onPress={() => setMapVisible(false)} style={[styles.mapToggleItem, !mapVisible && styles.mapToggleActive]}><Icon name="grid" size={15} color={!mapVisible ? palette.white : palette.action} /><Text style={[styles.mapToggleText, !mapVisible && styles.mapToggleTextActive]}>Lista</Text></Pressable><Pressable accessibilityRole="tab" accessibilityState={{ selected: mapVisible }} onPress={() => setMapVisible(true)} style={[styles.mapToggleItem, mapVisible && styles.mapToggleActive]}><Icon name="explore" size={15} color={mapVisible ? palette.white : palette.action} /><Text style={[styles.mapToggleText, mapVisible && styles.mapToggleTextActive]}>Mapa</Text></Pressable></View><View style={styles.sectionRow}><Text style={styles.sectionTitle}>{mapVisible ? 'Cerca de ti' : 'Resultados'}</Text><Text style={styles.sectionHint}>{filtered.length} {filtered.length === 1 ? 'espacio' : 'espacios'}{sortMode === 'price' ? ' · Menor precio' : sortMode === 'capacity' ? ' · Más capacidad' : ''}</Text></View>{mapVisible ? <><View style={styles.mapNotice}><Icon name="info" size={16} color={palette.action} /><Text style={styles.mapNoticeText}>Ubicaciones y precios de muestra. Toca un precio para ver el espacio.</Text></View><OpenStreetMap spaces={filtered} onSelect={openSpace} />{filtered.length ? <View style={styles.mapResultList}>{filtered.map(space => <SpaceCard key={space.id} space={space} favorite={favoriteIds.has(space.id)} onFavorite={() => toggleFavorite(space.id)} onOpen={() => openSpace(space)} />)}</View> : <EmptyState icon="search" title="Sin resultados" message="Prueba otra palabra o ajusta los filtros." />}</> : filtered.length ? filtered.map(space => <SpaceCard key={space.id} space={space} favorite={favoriteIds.has(space.id)} onFavorite={() => toggleFavorite(space.id)} onOpen={() => openSpace(space)} />) : <EmptyState icon="search" title="Sin resultados" message="Prueba con otra palabra o ajusta los filtros." action="Limpiar filtros" onAction={() => { setSearch(''); setCategory('Todos'); setAmenityFilter([]); setCapacityFilter(1); setSortMode('recommended'); }} />}</View>}
 
-      {tab === 'Favoritos' && <View style={styles.padded}><PageHeader eyebrow="GUARDADOS" title="Tus favoritos" subtitle="Los espacios que quieres tener a la mano." />{favorites.length ? catalog.filter(space => favoriteIds.has(space.id)).map(space => <SpaceCard key={space.id} space={space} favorite onFavorite={() => toggleFavorite(space.id)} onOpen={() => openSpace(space)} />) : <EmptyState icon="heart" title="Todavía no hay favoritos" message="Toca el corazón de un espacio para guardarlo aquí." action="Explorar espacios" onAction={() => chooseTab('Explorar')} />}</View>}
+      {tab === 'Favoritos' && <View style={styles.padded}><PageHeader eyebrow="GUARDADOS" title="Tus favoritos" subtitle="Los espacios que quieres tener a la mano." />{favoriteIds.size ? catalog.filter(space => favoriteIds.has(space.id)).map(space => <SpaceCard key={space.id} space={space} favorite onFavorite={() => toggleFavorite(space.id)} onOpen={() => openSpace(space)} />) : <EmptyState icon="heart" title="Todavía no hay favoritos" message="Toca el corazón de un espacio para guardarlo aquí." action="Explorar espacios" onAction={() => chooseTab('Explorar')} />}</View>}
 
-      {tab === 'Reservas' && <View style={styles.padded}><PageHeader eyebrow="TUS PLANES" title="Mis reservas" subtitle="Consulta tus solicitudes y organiza tu trabajo." />{bookings.length ? bookings.map(booking => {
+      {tab === 'Reservas' && <View style={styles.padded}><PageHeader eyebrow="TUS PLANES" title="Mis reservas" subtitle="Consulta tus solicitudes y organiza tu trabajo." />{myBookings.length ? myBookings.map(booking => {
         const space = catalog.find(item => item.id === booking.spaceId);
         if (!space) return null;
         return <Pressable key={booking.id} onPress={() => { void openBookingTicket(booking); }} style={styles.reservationCard}><View style={styles.reservationStatus}><Icon name={booking.status === 'Confirmada' ? 'check' : booking.status === 'Rechazada' ? 'close' : 'clock'} size={15} color={palette.action} /><Text style={styles.reservationStatusText}>{booking.status}</Text><Text style={styles.reservationId}>{booking.id}</Text></View><View style={styles.reservationBody}><SpacePhoto uri={space.image} label={`Fotografía de ${space.name}`} style={styles.reservationPhoto} /><View style={styles.reservationInfo}><Text style={styles.reservationName}>{space.name}</Text><Text style={styles.reservationMeta}>{space.area}</Text><Text style={styles.reservationMeta}>{formatDate(booking.date)} · {booking.time}</Text><Text style={styles.reservationPrice}>{formatMoney(booking.total)}</Text><Text style={styles.reservationMeta}>Depósito: {booking.paymentStatus === 'verificado' ? 'verificado' : booking.paymentStatus === 'reportado' ? 'en revisión' : booking.paymentStatus === 'rechazado' ? 'no validado' : 'pendiente'} · Ver ticket</Text></View></View></Pressable>;

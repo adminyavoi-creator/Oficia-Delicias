@@ -39,7 +39,7 @@ export function mapSpace(row: SpaceRow): Space {
 }
 
 export type BookingRow = {
-  id: string; space_id: string; local_date: string; local_time: string; unit: Unit; quantity: number;
+  id: string; client_id: string; space_id: string; local_date: string; local_time: string; unit: Unit; quantity: number;
   total_cents: number; status: 'pendiente' | 'confirmada' | 'rechazada' | 'cancelada';
   transfer_reference?: string; payer_reference?: string | null; payment_status?: TransferStatus;
 };
@@ -48,7 +48,7 @@ export function mapBooking(row: BookingRow): Booking {
   const shortId = row.id.replaceAll('-', '').slice(0, 6).toUpperCase();
   const status: Booking['status'] = row.status === 'confirmada' ? 'Confirmada' : row.status === 'rechazada' ? 'Rechazada' : 'Solicitud enviada';
   return {
-    id: `OF-${shortId}`, remoteId: row.id, spaceId: row.space_id, date: row.local_date,
+    id: `OF-${shortId}`, remoteId: row.id, clientId: row.client_id, spaceId: row.space_id, date: row.local_date,
     time: row.local_time.slice(0, 5), unit: row.unit, quantity: row.quantity,
     total: row.total_cents / 100, status, transferReference: row.transfer_reference,
     payerReference: row.payer_reference, paymentStatus: row.payment_status,
