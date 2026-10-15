@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** la migración local a Vite + React + Capacitor 8 comparte Supabase con la PWA y genera un AAB Android firmado con `targetSdk 36`; tipos, build web/PWA, sincronización Capacitor, Gradle release y firma pasan. En Play Console ya se creó el borrador **Oficia: espacios de trabajo** (`mx.oficia.delicias`, gratis, español latinoamericano) con las dos declaraciones autorizadas por el titular. La cuenta muestra como requisito para producción una prueba cerrada con 12 verificadores durante 14 días; falta terminar la ficha y cargar el AAB. El PWA publicado sigue en la versión anterior hasta integrar la migración en GitHub/Vercel. La prueba en un teléfono Android y el acceso nativo con Google siguen pendientes. Supabase conserva cuatro espacios de muestra y una solicitud; el inventario real sigue pendiente.
+**Estado actual (14 de octubre de 2026):** la migración a Vite + React + Capacitor 8 comparte Supabase con la PWA y genera un AAB Android firmado con `targetSdk 36`; tipos, build web/PWA, sincronización Capacitor, Gradle release y firma pasan. El código está integrado en GitHub `main` (commit `6131e0e`) y `https://oficia-delicias.vercel.app` ya muestra la nueva pantalla de acceso al recargar. En Play Console se creó el borrador **Oficia: espacios de trabajo** (`mx.oficia.delicias`, gratis, español latinoamericano) con las dos declaraciones autorizadas. La cuenta exige una prueba cerrada con 12 verificadores durante 14 días antes de solicitar producción; falta terminar la ficha y cargar el AAB. La prueba en un teléfono Android y el acceso nativo con Google siguen pendientes. Supabase conserva cuatro espacios de muestra y una solicitud; el inventario real sigue pendiente.
 
 ## Objetivo
 
@@ -28,7 +28,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | Cuenta anfitriona creada y asociada a los espacios de muestra; falta probar el flujo con una segunda cuenta cliente y validar políticas RLS |
 | Pantalla inicial de acceso y cierre de sesión | Completada | Login de Oficia y salida desde Perfil implementados; verificado en una sesión web limpia en producción |
 | Acceso con Google en web y Android | En curso | Google web está verificado; el puente Android compila. Probarlo en un teléfono y registrar la firma Play App Signing en Google Auth después de cargar el primer paquete |
-| Proyecto Vercel y frontend web | En curso | Publicar y verificar la nueva build PWA en `oficia-delicias.vercel.app`. La conexión Vercel actual no permite consultar el equipo `yavoi-alonso` (403); la CLI local requiere vincular el proyecto |
+| Proyecto Vercel y frontend web | Verificado en navegador | El dominio público muestra la nueva pantalla de acceso Vite después de recargar. La conexión Vercel no permite consultar el estado del build del equipo `yavoi-alonso` (403), por lo que no se pudo leer su detalle desde el conector |
 | Disponibilidad, horarios y confirmación real del anfitrión | Pendiente | Reglas de operación y calendario |
 | Pagos, cancelaciones y facturación | Pendiente | Proveedor de pagos y políticas comerciales |
 | Mapas y ubicación | Pendiente | Direcciones reales y proveedor de mapas |
@@ -50,8 +50,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 - Entorno local verificado: Node 26, JDK 21 de Homebrew y SDK Android API 36. `targetSdk` permanece en 36 para las entregas nuevas de Play.
 - El AAB se firma con una llave de carga local y excluida de Git. La llave y `android/upload-key.properties` deben respaldarse en un gestor seguro; no se publican en GitHub ni Vercel. Play App Signing tendrá su propia llave después de aceptar el flujo de Play Console.
 - La base de datos de Oficia está en el proyecto Supabase ya existente. Los identificadores de proyecto y organización se administran en los paneles de cada proveedor y se omiten de este plan público.
-- El repositorio público autorizado es [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). La llave Android y los archivos de entorno están excluidos del control de versiones.
-- La URL **https://oficia-delicias.vercel.app** muestra el login anterior. El proyecto de Vercel existe, pero la conexión actual devolvió 403 al intentar consultar el equipo `yavoi-alonso`; la CLI local solicita vincular el proyecto. No se da por publicado el nuevo PWA hasta verificar su build en ese dominio.
+- El repositorio público autorizado es [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). El commit `6131e0e` integra Vite + Capacitor y elimina la configuración Expo/EAS. La llave Android y los archivos de entorno están excluidos del control de versiones.
+- La URL **https://oficia-delicias.vercel.app** ya muestra la nueva pantalla de acceso Vite en una recarga de navegador. El conector Vercel devuelve 403 al consultar el equipo `yavoi-alonso` y la CLI local no logra cargar la cuenta; por ello falta confirmar desde el panel el estado y los logs del deployment, aunque la web pública sirve el nuevo frontend.
 - Supabase está en el plan Free: cuatro espacios, una solicitud y RLS en `spaces` y `bookings`. Security Advisor no informa errores; marca `Leaked Password Protection Disabled`, función disponible desde Pro. No se cambiará el plan ni se generarán cargos sin autorización específica.
 
 ## Registro de avances
@@ -104,6 +104,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Preparación de despliegue y pruebas | `oficia-delicias.vercel.app` sigue en la versión anterior. La consulta Vercel al equipo `yavoi-alonso` devuelve 403 y la CLI pide vincular el proyecto; la rama pública `main` aún contiene Expo. La compilación de Android no se instaló en un teléfono: ADB no pudo abrir su socket en este entorno. Revisar el acceso de Vercel, publicar el cambio y probar dispositivo físico antes de declarar listo para producción. |
 | 14 oct 2026 | Borrador de Google Play | Con autorización del titular, se creó «Oficia: espacios de trabajo» en la cuenta TheLogosDev con `mx.oficia.delicias`, gratis y español latinoamericano; se confirmaron las declaraciones de políticas y exportación. Play Console indica que esta cuenta necesita 12 verificadores en prueba cerrada durante 14 días para solicitar acceso a producción. |
 | 14 oct 2026 | Auditoría de dependencias | `npm audit --omit=dev` reporta 0 vulnerabilidades de producción. La auditoría completa reporta 21 avisos solo en dependencias de desarrollo; la corrección forzada requeriría subir React Native de tipos a 0.87.1 con cambio mayor, por lo que no se aplicó automáticamente. |
+| 14 oct 2026 | Publicación de la migración Vite/Capacitor | Commit `6131e0e` publicado en `main` de [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). La página pública de Oficia se recargó y mostró el título y la nueva pantalla de acceso. La conexión Vercel denegó la consulta de metadatos del deployment (403); el estado del build queda pendiente de revisar en el panel. Llave de firma y `.env.local` excluidos. |
 
 ## Correspondencia con los mockups
 
@@ -122,8 +123,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Integrar el código migrado en `main` y verificar una nueva build Ready de Vercel sin publicar llaves Android ni variables privadas; el conector Vercel todavía requiere resolver el acceso al equipo.
-2. Recorrer el PWA en una sesión limpia: login, catálogo, favoritos, solicitud y panel de anfitrión; confirmar que la solicitud existente y nuevas pruebas respeten RLS.
+1. Verificar en el panel Vercel el build ligado al commit `6131e0e` y revisar sus logs cuando el equipo vuelva a estar accesible desde la conexión.
+2. Recorrer el PWA con las cuentas cliente y anfitriona: login, catálogo, favoritos, solicitud y panel; confirmar que las nuevas pruebas respeten RLS.
 3. Cargar el AAB al borrador de Play para prueba interna; completar la firma de Play App Signing, registrarla en Google Auth y probar acceso en un teléfono físico. Antes de aceptar cualquier acuerdo de firma que presente Play Console, pedir confirmación al titular en el momento.
 4. Preparar ficha, política de privacidad, declaración de seguridad de datos y solicitud de eliminación de cuenta. Revisar la elegibilidad del equipo para producción: las cuentas personales creadas después del 13 de noviembre de 2023 requieren prueba cerrada con 12 participantes durante 14 días.
 5. Sustituir los espacios ilustrativos por inventario real antes de presentar Oficia como oferta operativa al público.
