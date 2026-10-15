@@ -41,7 +41,7 @@ Si alguien necesita ambas actividades, deberá usar dos cuentas distintas. Un ca
 
 | Entrega | Estado al 15 oct 2026 | Para terminar |
 | --- | --- | --- |
-| Elección y acceso con correo/Google | Implementado | Prueba visual de OAuth con dos cuentas nuevas en web y Android instalado |
+| Elección y acceso con correo/Google | Publicado como `4f1d74a`; vista local verificada | Probar OAuth con dos cuentas nuevas en web y Android instalado |
 | Perfil fijo y permisos | Migración aplicada; RLS y bloqueos probados en transacción | Prueba funcional completa desde la interfaz |
 | Panel de dueño | Implementado con inicio, espacios, solicitudes, ingresos y perfil | Mejorar fotos, horarios, reportes y notificaciones |
 | Borradores y revisión | Guardar, editar, enviar, validar o devolver implementados | Carga de fotos en Storage, dirección verificable, documentos y publicación controlada |

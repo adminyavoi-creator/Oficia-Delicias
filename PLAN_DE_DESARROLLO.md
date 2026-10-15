@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (15 de octubre de 2026):** Oficia usa una base compartida Vite + React + Capacitor 8 para PWA y Android. La elección «Busco espacio»/«Rento espacio», el perfil fijo en Supabase, el panel de dueño y la revisión de borradores por Operaciones están implementados; véase [el plan de perfiles](PLAN_PERFILES_Y_ANFITRIONES.md). Las cuatro cuentas existentes se clasificaron como 1 anfitrión y 3 clientes. Los ingresos de dueño cuentan solo depósitos verificados en espacios reales, por lo que hoy son $0 MXN. Las pruebas de permisos de base, pruebas automatizadas, compilación PWA y sincronización Android pasan. Aún faltan pruebas de interacción con cuentas nuevas, carga de fotos, inventario real y un AAB nuevo: el Android SDK no está disponible en este entorno. Los cuatro espacios publicados son demostrativos y nunca piden depósitos; faltan banco, titular y CLABE reales. La prueba interna 1.0.0 de Play sigue activa para un verificador. El despliegue visual público sigue sin revisión autorizada, aunque GitHub muestra `success` para el último cambio publicado.
+**Estado actual (15 de octubre de 2026):** Oficia usa una base compartida Vite + React + Capacitor 8 para PWA y Android. La elección «Busco espacio»/«Rento espacio», el perfil fijo en Supabase, el panel de dueño y la revisión de borradores por Operaciones están implementados y publicados en `main` como `4f1d74a`; véase [el plan de perfiles](PLAN_PERFILES_Y_ANFITRIONES.md). Las cuatro cuentas existentes se clasificaron como 1 anfitrión y 3 clientes. Los ingresos de dueño cuentan solo depósitos verificados en espacios reales, por lo que hoy son $0 MXN. Las pruebas de permisos de base, pruebas automatizadas, compilación PWA y sincronización Android pasan. Aún faltan pruebas de interacción con cuentas nuevas, carga de fotos, inventario real y un AAB nuevo: el Android SDK no está disponible en este entorno. Los cuatro espacios publicados son demostrativos y nunca piden depósitos; faltan banco, titular y CLABE reales. La prueba interna 1.0.0 de Play sigue activa para un verificador. GitHub reporta `success` para el despliegue de `4f1d74a`. La pantalla inicial y los dos caminos de registro se revisaron en la vista local; el dominio público y Android instalado siguen pendientes de revisión visual.
 
 ## Objetivo
 
@@ -37,7 +37,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 | Tarea | Estado | Dependencia |
 | --- | --- | --- |
-| Una app, dos perfiles fijos | Implementado en código y base; publicación pendiente | Elección antes del alta, cuentas existentes preservadas; probar correo/Google con nuevas cuentas |
+| Una app, dos perfiles fijos | Publicado en `4f1d74a`; Vercel `success` | Elección antes del alta, cuentas existentes preservadas; probar correo/Google con nuevas cuentas |
 | Panel de dueño y borradores | Implementado con revisión interna | Fotos, dirección, horarios y publicación comercial pendientes de inventario real |
 | Ingresos del dueño | Bruto verificado por espacio implementado | Comisiones, impuestos y liquidaciones aún por definir |
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
@@ -136,7 +136,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Preparación de la siguiente entrega Android | `npm run build` y `npx cap sync android` pasan. Gradle encontró el JDK 21, pero no hay Android SDK ni `android/local.properties` en este entorno; `bundleRelease` se detuvo antes de compilar. No se produjo un AAB nuevo. |
 | 15 oct 2026 | Privacidad entre cuentas | La bandeja personal filtra por `client_id`, aunque Operaciones vea todas las solicitudes; Favoritos usa almacenamiento por cuenta y se limpia la sesión al salir. Prueba automatizada con dos titulares, compilación PWA y sincronización Android correctas. Publicado como `2bd9118`; Vercel reporta `success`. Falta probar el cambio en dos cuentas reales y en Android instalado. |
 | 15 oct 2026 | Ticket compartible y actualización de reservas | El cliente puede compartir el resumen de su ticket por el sistema del dispositivo o copiarlo si no hay menú de compartir. La muestra se marca como demostración sin acceso ni depósito. “Mis reservas” permite recargar su estado. Tipos, pruebas, PWA y sincronización Android correctas; falta verificar la interacción en dispositivos instalados. |
-| 15 oct 2026 | Dos perfiles en una app | `oficia_profiles` inmutable y `space_drafts` con RLS aplicados en Supabase. Elección inicial para correo y Google, panel de dueño con espacios, solicitudes e ingresos brutos, revisión de borradores por Operaciones. La base probó bloqueo de cambio de perfil, reserva por anfitrión y borrador incompleto; 1 anfitrión y 3 clientes migrados. Tres pruebas automatizadas, build PWA y sincronización Android pasan. Publicación y prueba visual pendientes. |
+| 15 oct 2026 | Dos perfiles en una app | `oficia_profiles` inmutable y `space_drafts` con RLS aplicados en Supabase. Elección inicial para correo y Google, panel de dueño con espacios, solicitudes e ingresos brutos, revisión de borradores por Operaciones. La base probó bloqueo de cambio de perfil, reserva por anfitrión y borrador incompleto; 1 anfitrión y 3 clientes migrados. Tres pruebas automatizadas, build PWA y sincronización Android pasan. Publicado en `4f1d74a`; Vercel `success`; vista local de ambos caminos verificada. Prueba de OAuth real y Android pendiente. |
 
 ## Correspondencia con los mockups
 
@@ -156,7 +156,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Publicar y probar el nuevo flujo de perfiles con dos cuentas nuevas, una por correo y otra con Google, y comprobar que la elección no cambia al volver a entrar.
+1. Probar el flujo publicado de perfiles con dos cuentas nuevas, una por correo y otra con Google, y comprobar que la elección no cambia al volver a entrar.
 2. Verificar la experiencia de dueño en Android instalado: alta, borrador, revisión, solicitudes e ingresos. Generar AAB nuevo cuando el Android SDK esté disponible.
 3. Completar fotos en Storage, dirección y coordenadas verificables, horarios por espacio, calendario de cierres y publicación desde Operaciones antes de recibir inventario real.
 4. Definir reglas de comisiones, impuestos, liquidaciones, cancelaciones y devoluciones; después ampliar el historial financiero. Mantener $0 de ingresos reales mientras solo existan muestras.
