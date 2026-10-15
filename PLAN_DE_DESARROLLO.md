@@ -147,7 +147,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Detalle con fotos, servicios, opiniones y botón de reserva | Galería interactiva; catálogo de muestra identificado y reseñas ficticias ocultas |
 | Selección de fecha y hora | Implementada como solicitud; disponibilidad real pendiente |
 | Favoritos y comprobante | Implementados; favoritos separados por cuenta y comprobante sin autorización de acceso |
-| Panel de anfitrión y Operaciones | Conectado a Supabase; Operaciones verifica depósitos y autoriza, anfitrión solo consulta |
+| Panel de dueño y Operaciones | Dueño crea borradores, consulta solicitudes e ingresos brutos de sus espacios; Operaciones revisa borradores, valida depósitos y autoriza |
 | Mapa | OpenStreetMap con precios y cuatro puntos aproximados de muestra; ubicaciones reales pendientes |
 | Chat con anfitrión | Pendiente de cuentas, anfitriones y mensajería real |
 | QR o boleto de acceso | Pendiente de confirmación real de la reserva |
