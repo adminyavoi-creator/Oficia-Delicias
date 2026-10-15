@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** la migración a Vite + React + Capacitor 8 comparte Supabase con la PWA y genera un AAB Android firmado con `targetSdk 36`; tipos, build web/PWA, sincronización Capacitor, Gradle release y firma pasan. El código está integrado en GitHub `main` (commit `6131e0e`) y `https://oficia-delicias.vercel.app` ya muestra la nueva pantalla de acceso al recargar. En Play Console se creó el borrador **Oficia: espacios de trabajo** (`mx.oficia.delicias`, gratis, español latinoamericano) con las dos declaraciones autorizadas. La cuenta exige una prueba cerrada con 12 verificadores durante 14 días antes de solicitar producción; falta terminar la ficha y cargar el AAB. La prueba en un teléfono Android y el acceso nativo con Google siguen pendientes. Supabase conserva cuatro espacios de muestra y una solicitud; el inventario real sigue pendiente.
+**Estado actual (14 de octubre de 2026):** la migración a Vite + React + Capacitor 8 comparte Supabase con la PWA y genera un AAB Android firmado con `targetSdk 36`; tipos, build web/PWA, sincronización Capacitor, Gradle release y firma pasan. El código está integrado en GitHub `main` (commit `6131e0e`) y `https://oficia-delicias.vercel.app` muestra la nueva pantalla de acceso. En Play Console se creó el borrador **Oficia: espacios de trabajo** (`mx.oficia.delicias`, gratis, español latinoamericano) y se cargó el AAB a un borrador de prueba interna `1.0.0` con `targetSdk 36`. La versión permanece sin publicar: Google indica que no hay verificadores seleccionados, y falta confirmar qué cuenta autoriza el titular. Para solicitar producción se requiere una prueba cerrada con 12 verificadores durante 14 días; además falta completar la ficha. La prueba en un teléfono Android y el acceso nativo con Google siguen pendientes. Supabase conserva cuatro espacios de muestra y una solicitud; el inventario real sigue pendiente.
 
 ## Objetivo
 
@@ -32,7 +32,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Disponibilidad, horarios y confirmación real del anfitrión | Pendiente | Reglas de operación y calendario |
 | Pagos, cancelaciones y facturación | Pendiente | Proveedor de pagos y políticas comerciales |
 | Mapas y ubicación | Pendiente | Direcciones reales y proveedor de mapas |
-| Publicación Android | En curso | Borrador Play creado y AAB firmado listo; falta cargar a prueba interna, terminar ficha/privacidad y datos, probar en teléfono, registrar huella Play App Signing y completar la prueba cerrada de 12 verificadores por 14 días antes de solicitar producción |
+| Publicación Android | En curso | Borrador Play creado y AAB cargado a una versión interna en borrador; falta confirmar una cuenta de prueba, publicar el track interno, terminar ficha/privacidad y datos, probar en teléfono, registrar huella Play App Signing y completar la prueba cerrada de 12 verificadores por 14 días antes de solicitar producción |
 
 ## Decisiones registradas
 
@@ -105,6 +105,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Borrador de Google Play | Con autorización del titular, se creó «Oficia: espacios de trabajo» en la cuenta TheLogosDev con `mx.oficia.delicias`, gratis y español latinoamericano; se confirmaron las declaraciones de políticas y exportación. Play Console indica que esta cuenta necesita 12 verificadores en prueba cerrada durante 14 días para solicitar acceso a producción. |
 | 14 oct 2026 | Auditoría de dependencias | `npm audit --omit=dev` reporta 0 vulnerabilidades de producción. La auditoría completa reporta 21 avisos solo en dependencias de desarrollo; la corrección forzada requeriría subir React Native de tipos a 0.87.1 con cambio mayor, por lo que no se aplicó automáticamente. |
 | 14 oct 2026 | Publicación de la migración Vite/Capacitor | Commit `6131e0e` publicado en `main` de [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). La página pública de Oficia se recargó y mostró el título y la nueva pantalla de acceso. La conexión Vercel denegó la consulta de metadatos del deployment (403); el estado del build queda pendiente de revisar en el panel. Llave de firma y `.env.local` excluidos. |
+| 14 oct 2026 | AAB cargado a prueba interna | Play Console aceptó `app-release.aab` como borrador «Oficia Android 1.0.0» (`1.0.0`, `targetSdk 36`, tamaño aproximado 10.7 MB). No se publicó: Google advierte que no hay verificadores seleccionados y el track quedaría inaccesible. No se reutilizaron listas de pruebas de DeliCrunch ni Yavoi!. Falta elegir una cuenta autorizada para Oficia. |
 
 ## Correspondencia con los mockups
 
@@ -125,7 +126,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 1. Verificar en el panel Vercel el build ligado al commit `6131e0e` y revisar sus logs cuando el equipo vuelva a estar accesible desde la conexión.
 2. Recorrer el PWA con las cuentas cliente y anfitriona: login, catálogo, favoritos, solicitud y panel; confirmar que las nuevas pruebas respeten RLS.
-3. Cargar el AAB al borrador de Play para prueba interna; completar la firma de Play App Signing, registrarla en Google Auth y probar acceso en un teléfono físico. Antes de aceptar cualquier acuerdo de firma que presente Play Console, pedir confirmación al titular en el momento.
+3. Después de confirmar una cuenta de verificación de Oficia, asignarla al track interno y publicar la prueba; completar la firma de Play App Signing, registrarla en Google Auth y probar acceso en un teléfono físico. Antes de aceptar cualquier acuerdo de firma que presente Play Console, pedir confirmación al titular en el momento.
 4. Preparar ficha, política de privacidad, declaración de seguridad de datos y solicitud de eliminación de cuenta. Revisar la elegibilidad del equipo para producción: las cuentas personales creadas después del 13 de noviembre de 2023 requieren prueba cerrada con 12 participantes durante 14 días.
 5. Sustituir los espacios ilustrativos por inventario real antes de presentar Oficia como oferta operativa al público.
 
