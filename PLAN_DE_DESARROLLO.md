@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** Oficia usa Vite + React + Capacitor 8, con una base para Android y PWA. El ticket de depósito, el panel de Operaciones y el mapa OpenStreetMap con ubicaciones de muestra ya están implementados y publicados en GitHub `main` como `037ce82`. `npm run build` y `npx cap sync android` pasan; Vite avisa que el JavaScript principal supera 500 kB. GitHub reporta el chequeo de Vercel como `success`; la API del equipo devuelve 403 y la verificación visual del dominio fue denegada por el navegador de prueba. Tres migraciones nuevas aparecen aplicadas y registradas en Supabase. La CLABE sigue vacía porque faltan banco, titular y cuenta; los cuatro espacios son de muestra y no aceptan depósitos. Hay una solicitud en Supabase y no existe inventario real. No se ha generado un AAB nuevo: Gradle no encuentra Android SDK en este entorno. En Play Console, la prueba interna `1.0.0` sigue activa para un verificador; hace falta preparar y probar una actualización Android. Para solicitar producción se requiere una prueba cerrada con 12 verificadores durante 14 días.
+**Estado actual (14 de octubre de 2026):** Oficia usa Vite + React + Capacitor 8, con una base para Android y PWA. El ticket de depósito, el panel de Operaciones y el mapa OpenStreetMap con ubicaciones de muestra ya están implementados. La vista personal de reservas y los favoritos se separan por cuenta; el cambio se publicó en GitHub `main` como `2bd9118`. Las pruebas automatizadas, el build PWA y la sincronización Android pasan; el chequeo de Vercel está pendiente de terminar. `npm run build` y `npx cap sync android` pasan; Vite avisa que el JavaScript principal supera 500 kB. GitHub reporta el chequeo de Vercel como `success`; la API del equipo devuelve 403 y la verificación visual del dominio fue denegada por el navegador de prueba. Tres migraciones nuevas aparecen aplicadas y registradas en Supabase. La CLABE sigue vacía porque faltan banco, titular y cuenta; los cuatro espacios son de muestra y no aceptan depósitos. Hay una solicitud en Supabase y no existe inventario real. No se ha generado un AAB nuevo: Gradle no encuentra Android SDK en este entorno. En Play Console, la prueba interna `1.0.0` sigue activa para un verificador; hace falta preparar y probar una actualización Android. Para solicitar producción se requiere una prueba cerrada con 12 verificadores durante 14 días.
 
 ## Objetivo
 
@@ -38,7 +38,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Tarea | Estado | Dependencia |
 | --- | --- | --- |
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
-| Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | RLS separa cliente, anfitrión y Operaciones; falta prueba funcional con una segunda cuenta cliente |
+| Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | RLS separa cliente, anfitrión y Operaciones. “Mis reservas” filtra por titular y Favoritos se guarda por cuenta; falta prueba funcional con una segunda cuenta real |
 | Pantalla inicial de acceso y cierre de sesión | Completada | Login de Oficia y salida desde Perfil implementados; verificado en una sesión web limpia en producción |
 | Acceso con Google en web y Android | En curso | Google web está verificado; el puente Android compila. Probarlo en un teléfono y registrar la firma Play App Signing en Google Auth después de cargar el primer paquete |
 | Proyecto Vercel y frontend web | Verificado | Producción desde `main` quedó `READY`; el login público carga con Google, correo y contraseña. La conexión de Vercel ya permite consultar el proyecto y el deployment. |
@@ -63,7 +63,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 - Google Auth usa el proveedor de **Supabase Auth** en web y Android. Android usa el selector nativo de Google y entrega el token de identidad a Supabase; la web inicia OAuth con el mismo proveedor. Ambos caminos comparten usuario y RLS.
 - Google Auth Platform está configurada para Oficia como aplicación externa y usa Supabase Auth para web y Android. Los orígenes permitidos y las cuentas de prueba se administran en Google Cloud; el acceso web quedó verificado. Las credenciales privadas no se guardan en el repositorio ni en este plan.
 - El código local de Oficia ya migró de Expo/EAS a Vite 8.2.2 + React 19 + Capacitor 8.4.3, la misma familia tecnológica comprobada en Yavoi!. Gradle genera paquetes Android y el PWA usa los mismos componentes y proyecto Supabase; Android empaqueta el frontend en `dist` y no depende de Vercel para abrir.
-- Entorno local verificado: Node 26, JDK 21 de Homebrew y SDK Android API 36. `targetSdk` permanece en 36 para las entregas nuevas de Play.
+- Entorno local actual: Node 26 y JDK 21 de Homebrew. La última compilación Android falló porque Gradle no encontró Android SDK; una entrega anterior sí pudo generar el AAB 1.0.0. `targetSdk` permanece en 36.
 - El AAB se firma con una llave de carga local y excluida de Git. La llave y `android/upload-key.properties` deben respaldarse en un gestor seguro; no se publican en GitHub ni Vercel. Play App Signing tendrá su propia llave después de aceptar el flujo de Play Console.
 - La base de datos de Oficia está en el proyecto Supabase ya existente. Los identificadores de proyecto y organización se administran en los paneles de cada proveedor y se omiten de este plan público.
 - El repositorio público autorizado es [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). El commit `6131e0e` integra Vite + Capacitor y elimina la configuración Expo/EAS. La llave Android y los archivos de entorno están excluidos del control de versiones.
@@ -131,6 +131,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Revisión actual de Vercel y repositorio | GitHub confirma que `adminyavoi-creator/Oficia-Delicias` existe y acepta cambios de la cuenta conectada. La API de Vercel devuelve 403 para el equipo Yavoi Alonso; la CLI termina con error al cargar sesión. Resolver la entrega mediante el flujo Git conectado y comprobar el dominio público antes de marcarlo publicado. |
 | 14 oct 2026 | Publicación de mapa y depósitos | Commit `037ce82` publicado en `main` sobre la última versión del repositorio; incluye la app, ticket, mapa, tres migraciones y documentación. GitHub confirma el estado de Vercel como `success`. La API Vercel devuelve 403 y el navegador de prueba no permitió la revisión visual del dominio. |
 | 14 oct 2026 | Preparación de la siguiente entrega Android | `npm run build` y `npx cap sync android` pasan. Gradle encontró el JDK 21, pero no hay Android SDK ni `android/local.properties` en este entorno; `bundleRelease` se detuvo antes de compilar. No se produjo un AAB nuevo. |
+| 14 oct 2026 | Privacidad entre cuentas | La bandeja personal filtra por `client_id`, aunque Operaciones vea todas las solicitudes; Favoritos usa almacenamiento por cuenta y se limpia la sesión al salir. Prueba automatizada con dos titulares, compilación PWA y sincronización Android correctas. Publicado como `2bd9118`; falta probar el cambio en dos cuentas reales y en Android instalado. |
 
 ## Correspondencia con los mockups
 
@@ -140,7 +141,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Inicio con búsqueda, categorías, promoción y espacios | Implementada con la paleta de Oficia |
 | Detalle con fotos, servicios, opiniones y botón de reserva | Galería interactiva; catálogo de muestra identificado y reseñas ficticias ocultas |
 | Selección de fecha y hora | Implementada como solicitud; disponibilidad real pendiente |
-| Favoritos y comprobante | Implementados; el comprobante no autoriza acceso |
+| Favoritos y comprobante | Implementados; favoritos separados por cuenta y comprobante sin autorización de acceso |
 | Panel de anfitrión y Operaciones | Conectado a Supabase; Operaciones verifica depósitos y autoriza, anfitrión solo consulta |
 | Mapa | OpenStreetMap con precios y cuatro puntos aproximados de muestra; ubicaciones reales pendientes |
 | Chat con anfitrión | Pendiente de cuentas, anfitriones y mensajería real |
@@ -150,17 +151,12 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Cerrar la prueba cliente–anfitrión con dos cuentas y revisar que las solicitudes de prueba lleguen al panel correcto. Las políticas RLS actuales se inspeccionaron: clientes leen lo propio y anfitriones lo vinculado a sus espacios; falta probarlo con ambas cuentas.
-2. Conciliar el historial de migraciones de Supabase antes de usar la CLI. Las tablas existen y RLS está activo, pero `list_migrations` devuelve una lista vacía; la migración inicial se ejecutó desde SQL Editor, así que no debe reaplicarse a ciegas.
-3. Crear la siguiente versión Android desde el mismo código (subir `versionCode`), compilar el AAB firmado y probar login con Google y solicitudes en un dispositivo físico antes de actualizar el track interno.
-4. Recibir inventario real con fotos, dirección, tarifas, capacidad, horarios y amenidades. Solo entonces habilitar mapa, disponibilidad real, reseñas verificadas y QR de acceso.
-5. Completar la ficha de Play, la política de privacidad, seguridad de datos y eliminación de cuenta; preparar 12 participantes de Oficia para la prueba cerrada de 14 días.
-6. Revisar visualmente el dominio público desde un navegador autorizado; el chequeo de Vercel para `037ce82` ya terminó con `success`, pero el conector no puede leer el equipo.
-7. Configurar un Android SDK válido en el entorno de compilación, compilar un AAB nuevo y probar acceso, solicitud y ticket en un Android instalado antes de cambiar el track interno.
-8. Activar la transferencia manual cuando Operaciones capture banco, titular, CLABE válida e instrucciones. No usar la CLABE de prueba; no habilitar pago con tarjeta hasta definir proveedor, tarifas, comisiones, cancelaciones e impuestos.
-9. Al final, cargar el inventario real y sus coordenadas verificadas; reemplazar fotografías y precios de muestra y comprobar mapa, horarios y disponibilidad.
-10. Completar la ficha de Play, privacidad, seguridad de datos y eliminación de cuenta; organizar 12 verificadores de Oficia para la prueba cerrada de 14 días.
-11. Completar el portal profesional de administración descrito al final de este plan, con publicación de espacios, operación de solicitudes, reportes y auditoría bajo permisos de Supabase.
+1. Verificar con dos cuentas reales que “Mis reservas” y Favoritos permanecen separados, y que Operaciones recibe una transferencia reportada sin exponer otras reservas en la bandeja personal.
+2. Resolver el Android SDK del entorno, compilar un AAB con nuevo `versionCode` y probar Google Auth, solicitud y ticket en un teléfono antes de actualizar la prueba interna.
+3. Revisar visualmente el despliegue público cuando el navegador de prueba autorice abrir el dominio. El chequeo del build de Vercel por GitHub sí puede verificarse.
+4. Completar ficha de Play, privacidad, seguridad de datos y eliminación de cuenta; conseguir 12 verificadores para la prueba cerrada de 14 días.
+5. Implementar calendario operativo, bloqueo de horarios y portal administrativo de la fase final. Mantener transferencias desactivadas hasta que Operaciones configure banco, titular y CLABE reales.
+6. Al final, incorporar inventario autorizado con fotos, direcciones, coordenadas, tarifas y horarios; validar mapa, disponibilidad, acceso y reseñas con datos reales.
 
 ## Fase final · Portal profesional de administración de Oficia
 
