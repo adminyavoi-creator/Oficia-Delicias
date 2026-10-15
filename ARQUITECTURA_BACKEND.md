@@ -51,6 +51,7 @@ Estados de pago: `pendiente` → `reportado` → `verificado` o `rechazado`. Sol
 3. `20261014203000_harden_operations_permissions.sql` mueve la comprobación protegida a `private`, consolida políticas RLS y agrega un índice.
 4. `20261014210000_validate_clabe_and_lock_booking_fields.sql` valida el dígito de control CLABE y limita las actualizaciones de Operaciones.
 5. `20261015061418_perfiles_y_borradores_de_espacios.sql` fija la elección de cliente/anfitrión, migra cuentas existentes, protege reservas y crea borradores privados con revisión.
+6. `20261015070952_owner_space_details.sql` agrega dirección, coordenadas y horario habitual al borrador, y crea un bucket privado para fotos; `20261015071320_fix_owner_photo_path_validation.sql` corrige la validación de su ruta. Una foto de borrador requiere el perfil anfitrión y solo la leen su dueño u Operaciones. El horario es informativo hasta que exista un calendario de disponibilidad y publicación comercial.
 
 Las cuatro migraciones nuevas están registradas en Supabase. La migración inicial sigue siendo previa al historial remoto; no volver a aplicarla. Si se conecta una copia limpia con la CLI, conciliar ese baseline antes de reconstruir el proyecto.
 

@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (15 de octubre de 2026):** Oficia usa una base compartida Vite + React + Capacitor 8 para PWA y Android. La elección «Busco espacio»/«Rento espacio», el perfil fijo en Supabase, el panel de dueño y la revisión de borradores por Operaciones están implementados; véase [el plan de perfiles](PLAN_PERFILES_Y_ANFITRIONES.md). Las cuatro cuentas existentes se clasificaron como 1 anfitrión y 3 clientes. Los ingresos de dueño cuentan solo depósitos verificados en espacios reales, por lo que hoy son $0 MXN. Las pruebas de permisos de base, pruebas automatizadas, compilación PWA y sincronización Android pasan. Se localizó el Android SDK, y la versión 1.1.0 (código 2) compiló como AAB firmado y verificado. No hay un teléfono conectado para probar instalación ni Google Auth nativo; la prueba interna de Play continúa en 1.0.0. Los cuatro espacios publicados son demostrativos y nunca piden depósitos; faltan banco, titular, CLABE, fotos e inventario reales. La pantalla inicial y los dos caminos de registro se revisaron en la vista local; el dominio público sigue pendiente de revisión visual.
+**Estado actual (15 de octubre de 2026):** Oficia usa una base compartida Vite + React + Capacitor 8 para PWA y Android. La elección «Busco espacio»/«Rento espacio», el perfil fijo en Supabase, el panel de dueño y la revisión de borradores por Operaciones están implementados; véase [el plan de perfiles](PLAN_PERFILES_Y_ANFITRIONES.md). El usuario confirmó que su alta con Google Auth funciona; queda por registrar una prueba en Android instalado y otra con una cuenta nueva de cliente. Los borradores ya capturan dirección, coordenadas opcionales, días y horas habituales, y foto privada en Storage para revisión. Las cuatro cuentas anteriores se clasificaron como 1 anfitrión y 3 clientes. Los ingresos de dueño cuentan solo depósitos verificados en espacios reales, por lo que hoy son $0 MXN. Las pruebas de permisos de base, pruebas automatizadas, compilación PWA y sincronización Android pasan. La versión 1.1.0 (código 2) compiló como AAB firmado; no hay un teléfono conectado para probarla y la prueba interna de Play continúa en 1.0.0. Los cuatro espacios publicados son demostrativos y nunca piden depósitos; faltan banco, titular, CLABE, fotos e inventario reales. El dominio público sigue pendiente de revisión visual.
 
 ## Objetivo
 
@@ -38,7 +38,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Tarea | Estado | Dependencia |
 | --- | --- | --- |
 | Una app, dos perfiles fijos | Publicado en `4f1d74a`; Vercel `success` | Elección antes del alta, cuentas existentes preservadas; probar correo/Google con nuevas cuentas |
-| Panel de dueño y borradores | Implementado con revisión interna | Fotos, dirección, horarios y publicación comercial pendientes de inventario real |
+| Panel de dueño y borradores | Ficha ampliada y revisión interna | Probar carga de foto en cuenta real, calendario de cierres y publicación comercial con inventario verificado |
 | Ingresos del dueño | Bruto verificado por espacio implementado | Comisiones, impuestos y liquidaciones aún por definir |
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
 | Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | RLS separa cliente, anfitrión y Operaciones. “Mis reservas” filtra por titular y Favoritos se guarda por cuenta; falta prueba funcional con una segunda cuenta real |
@@ -138,6 +138,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 15 oct 2026 | Ticket compartible y actualización de reservas | El cliente puede compartir el resumen de su ticket por el sistema del dispositivo o copiarlo si no hay menú de compartir. La muestra se marca como demostración sin acceso ni depósito. “Mis reservas” permite recargar su estado. Tipos, pruebas, PWA y sincronización Android correctas; falta verificar la interacción en dispositivos instalados. |
 | 15 oct 2026 | Dos perfiles en una app | `oficia_profiles` inmutable y `space_drafts` con RLS aplicados en Supabase. Elección inicial para correo y Google, panel de dueño con espacios, solicitudes e ingresos brutos, revisión de borradores por Operaciones. La base probó bloqueo de cambio de perfil, reserva por anfitrión y borrador incompleto; 1 anfitrión y 3 clientes migrados. Tres pruebas automatizadas, build PWA y sincronización Android pasan. Publicado en `4f1d74a`; Vercel `success`; vista local de ambos caminos verificada. Prueba de OAuth real y Android pendiente. |
 | 15 oct 2026 | AAB 1.1.0 para dos perfiles | Android SDK encontrado en `/opt/homebrew/share/android-commandlinetools`; `bundleRelease` produjo AAB firmado de 10,690,517 bytes con los recursos web nuevos. `jarsigner -verify` pasó. ADB no encontró dispositivos; instalación y Google Auth nativo siguen sin verificar. La prueba interna de Play no se reemplazó. |
+| 15 oct 2026 | Ficha ampliada del anfitrión | El usuario confirmó que el alta con Google Auth funciona. Se añadieron dirección, ciudad, coordenadas opcionales, días/horas y carga de foto a un bucket privado de 5 MB; Operaciones ve estos datos y la imagen mediante URL temporal. El borrador de prueba pasó de guardado a revisión bajo el perfil de anfitrión y se revirtió. Build web, tres pruebas y sincronización Android pasan; AAB 1.1.0 recompilado. Falta probar el selector de foto y acceso en un dispositivo/cuenta real. |
 
 ## Correspondencia con los mockups
 
@@ -157,9 +158,9 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Probar el flujo publicado de perfiles con dos cuentas nuevas, una por correo y otra con Google, y comprobar que la elección no cambia al volver a entrar.
+1. Confirmar en qué plataforma se probó Google Auth y probar el perfil cliente con otra cuenta; comprobar que la elección no cambia al volver a entrar.
 2. Instalar el AAB 1.1.0 en el track interno y verificar en un teléfono la experiencia de dueño: alta, Google Auth, borrador, revisión, solicitudes e ingresos. No promoverlo a producción sin esa prueba.
-3. Completar fotos en Storage, dirección y coordenadas verificables, horarios por espacio, calendario de cierres y publicación desde Operaciones antes de recibir inventario real.
+3. Probar con un anfitrión real la subida de foto privada, verificar las coordenadas y agregar cierres/excepciones al horario antes de publicar inventario real. El horario habitual capturado aún no restringe reservas.
 4. Definir reglas de comisiones, impuestos, liquidaciones, cancelaciones y devoluciones; después ampliar el historial financiero. Mantener $0 de ingresos reales mientras solo existan muestras.
 5. Completar ficha de Play, privacidad, seguridad de datos y eliminación de cuenta; reunir los 12 verificadores para la prueba cerrada de 14 días.
 6. Al final, cargar datos y fotos autorizados, banco/titular/CLABE reales y validar en campo disponibilidad, mapa, pagos y acceso. Completar el portal administrativo profesional descrito abajo.

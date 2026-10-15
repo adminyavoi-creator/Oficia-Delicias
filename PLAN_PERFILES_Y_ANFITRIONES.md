@@ -41,10 +41,10 @@ Si alguien necesita ambas actividades, deberá usar dos cuentas distintas. Un ca
 
 | Entrega | Estado al 15 oct 2026 | Para terminar |
 | --- | --- | --- |
-| Elección y acceso con correo/Google | Publicado como `4f1d74a`; vista local verificada | Probar OAuth con dos cuentas nuevas en web y Android instalado |
+| Elección y acceso con correo/Google | El usuario confirmó que su alta con Google Auth funciona | Probar otra cuenta de cliente y Android instalado; verificar persistencia del perfil |
 | Perfil fijo y permisos | Migración aplicada; RLS y bloqueos probados en transacción | Prueba funcional completa desde la interfaz |
-| Panel de dueño | Implementado con inicio, espacios, solicitudes, ingresos y perfil | Mejorar fotos, horarios, reportes y notificaciones |
-| Borradores y revisión | Guardar, editar, enviar, validar o devolver implementados | Carga de fotos en Storage, dirección verificable, documentos y publicación controlada |
+| Panel de dueño | Inicio, espacios, solicitudes, ingresos y perfil; ficha con dirección, horario habitual y foto | Calendario de cierres, reportes y notificaciones |
+| Borradores y revisión | Guardar, editar, enviar, validar o devolver; foto privada en Storage | Probar carga real y coordenadas, documentos y publicación controlada |
 | Publicación de espacios reales | Pendiente | Datos y fotos autorizados; validación de ubicación, disponibilidad y condiciones |
 | Historial financiero | Bruto por espacio implementado | Libro de movimientos, comisiones, impuestos, devoluciones y liquidaciones |
 | Mensajes y avisos | Pendiente | Chat seguro, correos/avisos operativos y trazabilidad |

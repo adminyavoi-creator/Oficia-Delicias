@@ -103,7 +103,7 @@ function AppContent() {
     const ownHostIds = (hostResult.data ?? []).map(row => row.id as string);
     const operator = operatorResult.data === true;
     if (operator) {
-      const result = await supabase.from('space_drafts').select('id,name,area,category,capacity,image_url,rate_hour_cents,description').eq('status', 'en_revision').order('created_at', { ascending: true });
+      const result = await supabase.from('space_drafts').select('id,name,area,city,address,latitude,longitude,open_days,opens_at,closes_at,category,capacity,image_url,photo_path,rate_hour_cents,description').eq('status', 'en_revision').order('created_at', { ascending: true });
       if (result.error) throw result.error;
       setReviewDrafts((result.data ?? []) as ReviewDraft[]);
     } else setReviewDrafts([]);

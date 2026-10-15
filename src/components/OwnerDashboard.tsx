@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { supabase } from '../backend';
 import { formatDate, formatMoney } from '../data';
 import { palette } from '../theme';
@@ -10,15 +10,16 @@ import { Icon, IconName } from './Icon';
 type OwnerTab = 'Inicio' | 'Espacios' | 'Solicitudes' | 'Ingresos' | 'Perfil';
 type OwnedSpace = { id: string; name: string; area: string; is_demo: boolean; is_published: boolean; rate_hour_cents: number };
 type OwnerBooking = { id: string; space_id: string; local_date: string; local_time: string; quantity: number; unit: string; total_cents: number; status: string; payment_status: string; created_at: string };
-type Draft = { id: string; name: string; area: string; city: string; category: string; capacity: number; description: string; privacy: string; image_url: string; rate_hour_cents: number; rate_day_cents: number; rate_week_cents: number; status: string; rejection_reason: string | null };
-type DraftForm = { id?: string; name: string; area: string; category: string; capacity: string; description: string; privacy: string; image_url: string; hour: string; day: string; week: string };
+type Draft = { id: string; name: string; area: string; city: string; address: string; latitude: number | null; longitude: number | null; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: number; description: string; privacy: string; image_url: string; rate_hour_cents: number; rate_day_cents: number; rate_week_cents: number; status: string; rejection_reason: string | null };
+type DraftForm = { id?: string; name: string; area: string; city: string; address: string; latitude: string; longitude: string; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: string; description: string; privacy: string; image_url: string; hour: string; day: string; week: string };
 
-const blankDraft: DraftForm = { name: '', area: '', category: 'Oficina privada', capacity: '1', description: '', privacy: '', image_url: '', hour: '', day: '', week: '' };
+const blankDraft: DraftForm = { name: '', area: '', city: 'Delicias', address: '', latitude: '', longitude: '', open_days: [1, 2, 3, 4, 5], opens_at: '08:00', closes_at: '18:00', photo_path: null, category: 'Oficina privada', capacity: '1', description: '', privacy: '', image_url: '', hour: '', day: '', week: '' };
+const weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const tabs: { label: OwnerTab; icon: IconName }[] = [
   { label: 'Inicio', icon: 'home' }, { label: 'Espacios', icon: 'briefcase' }, { label: 'Solicitudes', icon: 'calendar' }, { label: 'Ingresos', icon: 'ticket' }, { label: 'Perfil', icon: 'user' },
 ];
 const toMoney = (value: string) => Math.round(Number(value) * 100);
-const formFromDraft = (draft: Draft): DraftForm => ({ id: draft.id, name: draft.name, area: draft.area, category: draft.category, capacity: String(draft.capacity), description: draft.description, privacy: draft.privacy, image_url: draft.image_url, hour: String(draft.rate_hour_cents / 100), day: String(draft.rate_day_cents / 100), week: String(draft.rate_week_cents / 100) });
+const formFromDraft = (draft: Draft): DraftForm => ({ id: draft.id, name: draft.name, area: draft.area, city: draft.city, address: draft.address, latitude: draft.latitude == null ? '' : String(draft.latitude), longitude: draft.longitude == null ? '' : String(draft.longitude), open_days: draft.open_days, opens_at: draft.opens_at.slice(0, 5), closes_at: draft.closes_at.slice(0, 5), photo_path: draft.photo_path, category: draft.category, capacity: String(draft.capacity), description: draft.description, privacy: draft.privacy, image_url: draft.image_url, hour: String(draft.rate_hour_cents / 100), day: String(draft.rate_day_cents / 100), week: String(draft.rate_week_cents / 100) });
 
 export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, onSignOut }: {
   userId: string; email: string; isOperations: boolean; onOpenOperations: () => void; onSignOut: () => void;
@@ -30,6 +31,7 @@ export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, 
   const [editing, setEditing] = useState<DraftForm | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!supabase) return;
@@ -56,6 +58,37 @@ export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, 
   const waiting = bookings.filter(booking => booking.status === 'pendiente').length;
   const spaceName = (id: string) => spaces.find(space => space.id === id)?.name ?? 'Espacio';
   const updateForm = (key: keyof DraftForm, value: string) => setEditing(current => current ? { ...current, [key]: value } : current);
+  const openDraft = (draft: Draft) => {
+    setEditing(formFromDraft(draft)); setPhotoPreview(null);
+    if (draft.photo_path && supabase) supabase.storage.from('oficia-space-drafts').createSignedUrl(draft.photo_path, 3600)
+      .then(({ data }) => setPhotoPreview(data?.signedUrl ?? null));
+  };
+  const choosePhoto = () => {
+    if (!editing?.id || !supabase || busy) { setNotice('Guarda el borrador antes de subir una foto.'); return; }
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/jpeg,image/png,image/webp';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file || !supabase || !editing?.id) return;
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) { setNotice('Usa JPG, PNG o WebP de hasta 5 MB.'); return; }
+      setBusy(true); setNotice('');
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+      const path = `${userId}/${editing.id}/${crypto.randomUUID()}.${ext}`;
+      try {
+        const upload = await supabase.storage.from('oficia-space-drafts').upload(path, file, { contentType: file.type, upsert: false });
+        if (upload.error) throw upload.error;
+        const saved = await supabase.from('space_drafts').update({ photo_path: path }).eq('id', editing.id).eq('owner_id', userId).select('id').single();
+        if (saved.error) { await supabase.storage.from('oficia-space-drafts').remove([path]); throw saved.error; }
+        const signed = await supabase.storage.from('oficia-space-drafts').createSignedUrl(path, 3600);
+        setPhotoPreview(signed.data?.signedUrl ?? null);
+        setEditing(current => current ? { ...current, photo_path: path } : current);
+        setNotice('Foto guardada en privado.');
+        await refresh();
+      } catch { setNotice('No se pudo subir la foto. Inténtalo de nuevo.'); }
+      finally { setBusy(false); }
+    };
+    input.click();
+  };
 
   const saveDraft = async (submit: boolean) => {
     if (!supabase || !editing || busy) return;
@@ -64,26 +97,33 @@ export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, 
     if (!editing.name.trim() || !editing.area.trim() || !Number.isInteger(capacity) || capacity < 1 || capacity > 100 || cents.some(value => !Number.isFinite(value) || value < 0 || value > 100000000)) {
       setNotice('Revisa nombre, zona, capacidad y tarifas.'); return;
     }
-    if (submit && (editing.name.trim().length < 3 || editing.area.trim().length < 3 || editing.description.trim().length < 20 || editing.privacy.trim().length < 10 || cents.some(value => value <= 0) || !/^https:\/\/\S+$/i.test(editing.image_url.trim()))) {
-      setNotice('Para enviar a revisión, completa descripción, privacidad, tarifas y una foto HTTPS.'); return;
+    const latitude = editing.latitude.trim() ? Number(editing.latitude) : null;
+    const longitude = editing.longitude.trim() ? Number(editing.longitude) : null;
+    if ((latitude === null) !== (longitude === null) || (latitude !== null && (!Number.isFinite(latitude) || Math.abs(latitude) > 90)) || (longitude !== null && (!Number.isFinite(longitude) || Math.abs(longitude) > 180)) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(editing.opens_at) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(editing.closes_at) || editing.closes_at <= editing.opens_at || !editing.open_days.length) {
+      setNotice('Revisa coordenadas y horario de apertura.'); return;
+    }
+    if (submit && (editing.name.trim().length < 3 || editing.area.trim().length < 3 || editing.address.trim().length < 8 || editing.city.trim().length < 3 || editing.description.trim().length < 20 || editing.privacy.trim().length < 10 || cents.some(value => value <= 0) || (!editing.photo_path && !/^https:\/\/\S+$/i.test(editing.image_url.trim())))) {
+      setNotice('Completa dirección, descripción, privacidad, tarifas y foto.'); return;
     }
     setBusy(true); setNotice('');
-    const fields = { name: editing.name.trim(), area: editing.area.trim(), category: editing.category, capacity,
+    const fields = { name: editing.name.trim(), area: editing.area.trim(), city: editing.city.trim(), address: editing.address.trim(), latitude, longitude, open_days: editing.open_days, opens_at: editing.opens_at, closes_at: editing.closes_at, category: editing.category, capacity,
       description: editing.description.trim(), privacy: editing.privacy.trim(), image_url: editing.image_url.trim(),
       rate_hour_cents: cents[0], rate_day_cents: cents[1], rate_week_cents: cents[2] };
     try {
+      let savedId = editing.id;
       if (editing.id) {
         const { error } = await supabase.from('space_drafts').update({ ...fields, status: submit ? 'en_revision' : 'borrador' }).eq('id', editing.id).eq('owner_id', userId);
         if (error) throw error;
       } else {
         const { data, error } = await supabase.from('space_drafts').insert({ ...fields, owner_id: userId }).select('id').single();
         if (error) throw error;
+        savedId = data.id;
         if (submit) {
           const result = await supabase.from('space_drafts').update({ status: 'en_revision' }).eq('id', data.id);
           if (result.error) throw result.error;
         }
       }
-      setEditing(null);
+      setEditing(submit ? null : { ...editing, id: savedId });
       setNotice(submit ? 'Espacio enviado a revisión. Aún no aparece en el catálogo.' : 'Borrador guardado.');
       await refresh();
     } catch {
@@ -100,22 +140,32 @@ export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, 
         <View style={styles.stats}><Stat label="Solicitudes" value={String(waiting)} /><Stat label="Espacios" value={String(spaces.filter(space => !space.is_demo).length + drafts.length)} /><Stat label="Ingresos confirmados" value={formatMoney(gross)} wide /></View>
         <Text style={styles.section}>Mis espacios</Text>
         {spaces.filter(space => !space.is_demo).length || drafts.length ? <>{spaces.filter(space => !space.is_demo).map(space => <SpaceLine key={space.id} name={space.name} detail={space.area} badge={space.is_published ? 'Publicado' : 'Pausado'} />)}{drafts.slice(0, 3).map(draft => <SpaceLine key={draft.id} name={draft.name || 'Espacio sin nombre'} detail={draft.area || 'Completa la zona'} badge={draft.status === 'en_revision' ? 'En revisión' : draft.status === 'aprobado' ? 'Validado' : draft.status === 'rechazado' ? 'Con observaciones' : 'Borrador'} />)}</> : <Empty text="Agrega tu primer espacio para comenzar." />}
-        <Pressable accessibilityRole="button" onPress={() => { setTab('Espacios'); setEditing({ ...blankDraft }); }} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Agregar espacio</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => { setTab('Espacios'); setPhotoPreview(null); setEditing({ ...blankDraft }); }} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Agregar espacio</Text></Pressable>
       </>}
       {tab === 'Espacios' && <>
         <Text style={styles.eyebrow}>CATÁLOGO</Text><Text style={styles.title}>Mis espacios</Text>
-        {!editing ? <><Pressable accessibilityRole="button" onPress={() => setEditing({ ...blankDraft })} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Nuevo espacio</Text></Pressable>
-          {drafts.map(draft => <Pressable key={draft.id} accessibilityRole="button" onPress={() => { if (draft.status === 'borrador' || draft.status === 'rechazado') setEditing(formFromDraft(draft)); }} style={styles.spaceCard}><SpaceLine name={draft.name || 'Espacio sin nombre'} detail={draft.area || 'Completa la zona'} badge={draft.status === 'en_revision' ? 'En revisión' : draft.status === 'aprobado' ? 'Validado' : draft.status === 'rechazado' ? 'Con observaciones' : 'Borrador'} />{draft.rejection_reason ? <Text style={styles.small}>{draft.rejection_reason}</Text> : null}</Pressable>)}
+        {!editing ? <><Pressable accessibilityRole="button" onPress={() => { setPhotoPreview(null); setEditing({ ...blankDraft }); }} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Nuevo espacio</Text></Pressable>
+          {drafts.map(draft => <Pressable key={draft.id} accessibilityRole="button" onPress={() => { if (draft.status === 'borrador' || draft.status === 'rechazado') openDraft(draft); }} style={styles.spaceCard}><SpaceLine name={draft.name || 'Espacio sin nombre'} detail={draft.area || 'Completa la zona'} badge={draft.status === 'en_revision' ? 'En revisión' : draft.status === 'aprobado' ? 'Validado' : draft.status === 'rechazado' ? 'Con observaciones' : 'Borrador'} />{draft.rejection_reason ? <Text style={styles.small}>{draft.rejection_reason}</Text> : null}</Pressable>)}
           {spaces.map(space => <SpaceLine key={space.id} name={space.name} detail={space.area} badge={space.is_demo ? 'Muestra · sin ingresos' : space.is_published ? 'Publicado' : 'Pausado'} />)}
           {!drafts.length && !spaces.length ? <Empty text="Aún no has agregado espacios." /> : null}</> : <>
           <View style={styles.formHead}><Text style={styles.section}>{editing.id ? 'Editar borrador' : 'Nuevo espacio'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Cerrar formulario" onPress={() => setEditing(null)}><Icon name="close" size={22} /></Pressable></View>
           <Field label="Nombre del espacio" value={editing.name} onChange={value => updateForm('name', value)} placeholder="Ej. Sala Centro" />
           <Field label="Zona" value={editing.area} onChange={value => updateForm('area', value)} placeholder="Colonia y ciudad" />
+          <Field label="Ciudad" value={editing.city} onChange={value => updateForm('city', value)} placeholder="Delicias" />
+          <Field label="Dirección" value={editing.address} onChange={value => updateForm('address', value)} placeholder="Calle, número y colonia" />
+          <View style={styles.rateRow}><View style={styles.rateField}><Field label="Latitud (opcional)" value={editing.latitude} onChange={value => updateForm('latitude', value)} placeholder="28.19" numeric /></View><View style={styles.rateField}><Field label="Longitud (opcional)" value={editing.longitude} onChange={value => updateForm('longitude', value)} placeholder="-105.47" numeric /></View></View>
           <Text style={styles.label}>Tipo</Text><View style={styles.chips}>{['Oficina privada', 'Sala de juntas', 'Coworking'].map(value => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: editing.category === value }} onPress={() => updateForm('category', value)} style={[styles.chip, editing.category === value && styles.chipActive]}><Text style={[styles.chipText, editing.category === value && styles.chipTextActive]}>{value}</Text></Pressable>)}</View>
           <Field label="Capacidad" value={editing.capacity} onChange={value => updateForm('capacity', value.replace(/\D/g, ''))} placeholder="Personas" numeric />
           <Field label="Descripción" value={editing.description} onChange={value => updateForm('description', value)} placeholder="Qué hace especial a tu espacio" multiline />
           <Field label="Privacidad" value={editing.privacy} onChange={value => updateForm('privacy', value)} placeholder="Ej. Sala cerrada de uso exclusivo" multiline />
-          <Field label="Foto principal (enlace HTTPS)" value={editing.image_url} onChange={value => updateForm('image_url', value)} placeholder="https://..." />
+          <Text style={styles.section}>Disponibilidad habitual</Text>
+          <View style={styles.chips}>{weekDays.map((day, index) => <Pressable key={day} accessibilityRole="button" accessibilityState={{ selected: editing.open_days.includes(index) }} onPress={() => setEditing(current => current ? { ...current, open_days: current.open_days.includes(index) ? current.open_days.filter(value => value !== index) : [...current.open_days, index].sort() } : current)} style={[styles.chip, editing.open_days.includes(index) && styles.chipActive]}><Text style={[styles.chipText, editing.open_days.includes(index) && styles.chipTextActive]}>{day}</Text></Pressable>)}</View>
+          <View style={styles.rateRow}><View style={styles.rateField}><Field label="Abre" value={editing.opens_at} onChange={value => updateForm('opens_at', value)} placeholder="08:00" /></View><View style={styles.rateField}><Field label="Cierra" value={editing.closes_at} onChange={value => updateForm('closes_at', value)} placeholder="18:00" /></View></View>
+          <Text style={styles.section}>Foto principal</Text>
+          {photoPreview || editing.image_url ? <Image accessibilityLabel="Foto del espacio" source={{ uri: photoPreview || editing.image_url }} style={styles.photo} /> : null}
+          <Pressable accessibilityRole="button" disabled={busy} onPress={choosePhoto} style={styles.secondary}><Text style={styles.secondaryText}>Subir foto · JPG, PNG o WebP</Text></Pressable>
+          <Text style={styles.small}>Primero guarda el borrador. La foto permanece privada durante la revisión.</Text>
+          <Field label="O pega un enlace HTTPS" value={editing.image_url} onChange={value => updateForm('image_url', value)} placeholder="https://..." />
           <Text style={styles.section}>Tarifas en MXN</Text><View style={styles.rateRow}><View style={styles.rateField}><Field label="Hora" value={editing.hour} onChange={value => updateForm('hour', value)} placeholder="0" numeric /></View><View style={styles.rateField}><Field label="Día" value={editing.day} onChange={value => updateForm('day', value)} placeholder="0" numeric /></View><View style={styles.rateField}><Field label="Semana" value={editing.week} onChange={value => updateForm('week', value)} placeholder="0" numeric /></View></View>
           <Pressable accessibilityRole="button" disabled={busy} onPress={() => saveDraft(false)} style={styles.action}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Guardar borrador'}</Text></Pressable>
           <Pressable accessibilityRole="button" disabled={busy} onPress={() => saveDraft(true)} style={styles.secondary}><Text style={styles.secondaryText}>Enviar a revisión</Text></Pressable>
@@ -161,5 +211,6 @@ const styles = StyleSheet.create({
   empty: { backgroundColor: palette.white, borderRadius: 18, padding: 28, alignItems: 'center', gap: 10, borderWidth: 1, borderColor: palette.line }, emptyText: { color: palette.muted, fontSize: 13, textAlign: 'center', lineHeight: 19 },
   incomeHero: { backgroundColor: palette.plum, borderRadius: 21, padding: 23, marginBottom: 21 }, incomeLabel: { color: palette.blush, fontSize: 12, fontWeight: '700' }, incomeValue: { color: palette.white, fontSize: 33, fontWeight: '900', marginTop: 9 }, incomeHint: { color: palette.blush, fontSize: 11, marginTop: 8 },
   formHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, field: { marginTop: 13 }, label: { color: palette.plum, fontSize: 12, fontWeight: '800', marginBottom: 6 }, input: { borderWidth: 1, borderColor: palette.line, borderRadius: 13, paddingHorizontal: 13, paddingVertical: 12, backgroundColor: palette.white, color: palette.plum, fontSize: 14, minHeight: 45 }, multiline: { minHeight: 88, textAlignVertical: 'top' }, chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, chip: { paddingHorizontal: 10, paddingVertical: 9, borderRadius: 10, backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line }, chipActive: { backgroundColor: palette.action, borderColor: palette.action }, chipText: { color: palette.plum, fontSize: 11, fontWeight: '700' }, chipTextActive: { color: palette.white }, rateRow: { flexDirection: 'row', gap: 9 }, rateField: { flex: 1 },
+  photo: { width: '100%', height: 190, borderRadius: 14, backgroundColor: palette.blush, marginVertical: 12 },
   nav: { flexDirection: 'row', backgroundColor: palette.white, borderTopWidth: 1, borderColor: palette.line, paddingVertical: 9, paddingHorizontal: 5 }, navItem: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 3 }, navText: { color: palette.muted, fontSize: 10 }, navActive: { color: palette.action, fontWeight: '800' },
 });
