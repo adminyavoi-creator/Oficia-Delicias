@@ -33,6 +33,7 @@ export function mapSpace(row: SpaceRow): Space {
     image: row.image_url, gallery: row.gallery_urls?.length ? row.gallery_urls : [row.image_url],
     rate: { Hora: row.rate_hour_cents / 100, Día: row.rate_day_cents / 100, Semana: row.rate_week_cents / 100 },
     rating: row.rating == null ? 'Nuevo' : Number(row.rating).toFixed(1), reviewCount: row.review_count ?? 0,
+    isDemo: row.is_demo,
   };
 }
 
