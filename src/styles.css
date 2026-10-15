@@ -15,6 +15,99 @@ body { min-height: 100vh; min-height: 100dvh; background: #fff9f8; }
 button, input, textarea { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 
+.osm-map {
+  position: relative;
+  width: 100%;
+  height: 360px;
+  overflow: hidden;
+  border: 1px solid #ead8d9;
+  border-radius: 20px;
+  background: #e8eee5;
+  touch-action: none;
+  cursor: grab;
+  isolation: isolate;
+}
+.osm-map:active { cursor: grabbing; }
+.osm-map-tiles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.osm-map-tile { position: absolute; width: 256px; height: 256px; max-width: none; user-select: none; }
+.osm-price-marker {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 77px;
+  padding: 7px 10px 6px;
+  border: 2px solid #d35e69;
+  border-radius: 13px;
+  color: #512d37;
+  background: #fff;
+  box-shadow: 0 4px 13px #512d372e;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.osm-price-marker::after {
+  position: absolute;
+  bottom: -7px;
+  left: calc(50% - 6px);
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid #d35e69;
+  border-bottom: 2px solid #d35e69;
+  background: #fff;
+  content: "";
+  transform: rotate(45deg);
+}
+.osm-price-marker strong { font-size: 12px; font-weight: 900; line-height: 15px; }
+.osm-price-marker strong small { margin-left: 2px; color: #80666e; font-size: 9px; font-weight: 700; }
+.osm-price-marker span { margin-top: 2px; color: #b54753; font-size: 8px; font-weight: 800; }
+.osm-map-controls {
+  position: absolute;
+  z-index: 3;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  gap: 6px;
+}
+.osm-map-controls button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid #ead8d9;
+  border-radius: 11px;
+  color: #512d37;
+  background: #fff;
+  box-shadow: 0 2px 8px #512d371c;
+  font-size: 20px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.osm-map-attribution {
+  position: absolute;
+  z-index: 3;
+  right: 5px;
+  bottom: 4px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  color: #384338;
+  background: #ffffffdf;
+  font: 10px/14px Arial, sans-serif;
+  text-decoration: none;
+}
+.osm-map-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: #512d37;
+  background: #fff9f8cc;
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .auth-video-background {
   position: absolute;
   inset: 0;
