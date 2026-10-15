@@ -24,6 +24,7 @@ export type SpaceRow = {
   description: string; privacy: string; amenities: string[]; image_url: string; gallery_urls: string[];
   rate_hour_cents: number; rate_day_cents: number; rate_week_cents: number; rating: number | null;
   review_count: number; is_demo: boolean; is_published: boolean; latitude?: number | null; longitude?: number | null;
+  open_days?: number[]; opens_at?: string; closes_at?: string;
 };
 
 export function mapSpace(row: SpaceRow): Space {
@@ -35,6 +36,7 @@ export function mapSpace(row: SpaceRow): Space {
     rate: { Hora: row.rate_hour_cents / 100, Día: row.rate_day_cents / 100, Semana: row.rate_week_cents / 100 },
     rating: row.rating == null ? 'Nuevo' : Number(row.rating).toFixed(1), reviewCount: row.review_count ?? 0,
     isDemo: row.is_demo, latitude: row.latitude ?? demoPoint?.latitude, longitude: row.longitude ?? demoPoint?.longitude,
+    openDays: row.open_days ?? [1, 2, 3, 4, 5], opensAt: row.opens_at?.slice(0, 5) ?? '08:00', closesAt: row.closes_at?.slice(0, 5) ?? '18:00',
   };
 }
 

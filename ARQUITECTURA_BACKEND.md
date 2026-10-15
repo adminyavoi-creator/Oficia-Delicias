@@ -1,6 +1,6 @@
 # Oficia · arquitectura de datos y operación
 
-**Estado actual:** Vite + React + Capacitor 8 comparten la app Android, la PWA y Supabase Auth/Database. Las migraciones de reservas, depósitos y perfiles están aplicadas al proyecto de Oficia. Hay cuatro espacios y una reserva de muestra; no existe inventario real ni una cuenta bancaria configurada. El mapa OpenStreetMap usa coordenadas aproximadas solo para las fichas de demostración.
+**Estado actual:** Vite + React + Capacitor 8 comparten la app Android, la PWA y Supabase Auth/Database. Las migraciones de reservas, depósitos, perfiles, horarios, cierres e intervalos ocupados están aplicadas al proyecto de Oficia. Hay cuatro espacios publicados de muestra; no existe inventario real ni una cuenta bancaria configurada. El mapa OpenStreetMap usa coordenadas aproximadas solo para las fichas de demostración.
 
 ## Flujo de solicitud, depósito y autorización
 
@@ -22,6 +22,7 @@ La app no cobra automáticamente ni recibe comprobantes adjuntos. Los espacios d
 | `public.transfer_settings` | Banco, CLABE, titular, instrucciones y fecha de actualización; una fila; CLABE con 18 dígitos y dígito verificador | Datos públicos que se muestran en tickets de espacios reales |
 | `public.oficia_profiles` | `user_id` y tipo fijo `cliente`/`anfitrion`; solo lectura propia e inserción única con RLS; sin actualización ni borrado por el usuario | Enviar cada sesión de correo o Google a su experiencia sin confiar en metadatos editables |
 | `public.space_drafts` | Borradores privados del dueño, tarifas en centavos, estado de revisión y motivo; RLS para dueño y Operaciones | Preparar inventario sin hacerlo público ni aceptar reservas antes de validar |
+| `public.space_busy_intervals` | `booking_id`, `space_id`, `starts_at`, `ends_at`; una tabla derivada mantenida por trigger al confirmar, cancelar o eliminar una reserva. RLS solo permite leer el espacio y el intervalo de rentas activas en espacios reales publicados; los clientes no pueden escribir. | Deshabilitar horas ocupadas sin exponer nombre, email, ID o datos de pago del cliente |
 | `private.operations_users` | Identificadores Auth autorizados, sin acceso directo por Data API | Autorizar panel, edición de cuenta y validación de depósitos |
 
 Estados de pago: `pendiente` → `reportado` → `verificado` o `rechazado`. Solo un depósito verificado puede llevar una solicitud a `confirmada`. El anfitrión no tiene política de escritura para estos cambios. El trigger mantiene la verificación de traslapes antes de confirmar.
@@ -51,9 +52,11 @@ Estados de pago: `pendiente` → `reportado` → `verificado` o `rechazado`. Sol
 3. `20261014203000_harden_operations_permissions.sql` mueve la comprobación protegida a `private`, consolida políticas RLS y agrega un índice.
 4. `20261014210000_validate_clabe_and_lock_booking_fields.sql` valida el dígito de control CLABE y limita las actualizaciones de Operaciones.
 5. `20261015061418_perfiles_y_borradores_de_espacios.sql` fija la elección de cliente/anfitrión, migra cuentas existentes, protege reservas y crea borradores privados con revisión.
-6. `20261015070952_owner_space_details.sql` agrega dirección, coordenadas y horario habitual al borrador, y crea un bucket privado para fotos; `20261015071320_fix_owner_photo_path_validation.sql` corrige la validación de su ruta. Una foto de borrador requiere el perfil anfitrión y solo la leen su dueño u Operaciones. El horario es informativo hasta que exista un calendario de disponibilidad y publicación comercial.
+6. `20261015070952_owner_space_details.sql` agrega dirección, coordenadas y horario habitual al borrador, y crea un bucket privado para fotos; `20261015071320_fix_owner_photo_path_validation.sql` corrige la validación de su ruta.
+7. `20261015073530_space_availability.sql` agrega horario semanal, cierres y validación de traslapes al solicitar o confirmar.
+8. `20261015151912_space_busy_intervals.sql` mantiene y expone solo los intervalos de reservas confirmadas para bloquearlos en el selector.
 
-Las cuatro migraciones nuevas están registradas en Supabase. La migración inicial sigue siendo previa al historial remoto; no volver a aplicarla. Si se conecta una copia limpia con la CLI, conciliar ese baseline antes de reconstruir el proyecto.
+Las ocho migraciones posteriores al esquema inicial están aplicadas en Supabase. La migración inicial sigue siendo previa al historial remoto; no volver a aplicarla. Si se conecta una copia limpia con la CLI, conciliar ese baseline antes de reconstruir el proyecto.
 
 ## Próximos datos necesarios para operar con clientes reales
 

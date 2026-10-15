@@ -17,6 +17,9 @@ export type Space = {
   description: string;
   privacy: string;
   isDemo: boolean;
+  openDays?: number[];
+  opensAt?: string;
+  closesAt?: string;
   latitude?: number;
   longitude?: number;
   featured?: boolean;

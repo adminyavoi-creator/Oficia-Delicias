@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { supabase } from '../backend';
-import { formatDate, formatMoney } from '../data';
+import { formatDate, formatMoney, nextDates } from '../data';
 import { palette } from '../theme';
 import { ownerRevenue } from '../ownerMetrics';
 import { Brand } from './Brand';
@@ -9,6 +9,7 @@ import { Icon, IconName } from './Icon';
 
 type OwnerTab = 'Inicio' | 'Espacios' | 'Solicitudes' | 'Ingresos' | 'Perfil';
 type OwnedSpace = { id: string; name: string; area: string; is_demo: boolean; is_published: boolean; rate_hour_cents: number };
+type Closure = { space_id: string; closed_on: string };
 type OwnerBooking = { id: string; space_id: string; local_date: string; local_time: string; quantity: number; unit: string; total_cents: number; status: string; payment_status: string; created_at: string };
 type Draft = { id: string; name: string; area: string; city: string; address: string; latitude: number | null; longitude: number | null; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: number; description: string; privacy: string; image_url: string; rate_hour_cents: number; rate_day_cents: number; rate_week_cents: number; status: string; rejection_reason: string | null };
 type DraftForm = { id?: string; name: string; area: string; city: string; address: string; latitude: string; longitude: string; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: string; description: string; privacy: string; image_url: string; hour: string; day: string; week: string };
@@ -28,6 +29,7 @@ export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, 
   const [spaces, setSpaces] = useState<OwnedSpace[]>([]);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [bookings, setBookings] = useState<OwnerBooking[]>([]);
+  const [closures, setClosures] = useState<Closure[]>([]);
   const [editing, setEditing] = useState<DraftForm | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
@@ -43,7 +45,12 @@ export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, 
     if (owned.error || draftsResult.error || requests.error) throw owned.error ?? draftsResult.error ?? requests.error;
     const ownedSpaces = (owned.data ?? []) as OwnedSpace[];
     const ids = new Set(ownedSpaces.map(space => space.id));
+    const closureResult = ownedSpaces.length
+      ? await supabase.from('space_closures').select('space_id,closed_on').in('space_id', [...ids]).gte('closed_on', nextDates()[0].key)
+      : { data: [], error: null };
+    if (closureResult.error) throw closureResult.error;
     setSpaces(ownedSpaces);
+    setClosures((closureResult.data ?? []) as Closure[]);
     setDrafts((draftsResult.data ?? []) as Draft[]);
     setBookings(((requests.data ?? []) as OwnerBooking[]).filter(booking => ids.has(booking.space_id)));
   }, [userId]);
@@ -62,6 +69,19 @@ export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, 
     setEditing(formFromDraft(draft)); setPhotoPreview(null);
     if (draft.photo_path && supabase) supabase.storage.from('oficia-space-drafts').createSignedUrl(draft.photo_path, 3600)
       .then(({ data }) => setPhotoPreview(data?.signedUrl ?? null));
+  };
+  const toggleClosure = async (spaceId: string, date: string, isClosed: boolean) => {
+    if (!supabase || busy) return;
+    setBusy(true); setNotice('');
+    const result = isClosed
+      ? await supabase.from('space_closures').delete().eq('space_id', spaceId).eq('closed_on', date)
+      : await supabase.from('space_closures').insert({ space_id: spaceId, closed_on: date });
+    if (result.error) setNotice(result.error.message.includes('renta autorizada') ? 'Ya hay una renta autorizada ese día.' : 'No se pudo actualizar la fecha.');
+    else {
+      setNotice(isClosed ? 'Fecha disponible de nuevo.' : 'Fecha bloqueada.');
+      await refresh().catch(() => setNotice('Fecha guardada. Actualiza el panel para verla.'));
+    }
+    setBusy(false);
   };
   const choosePhoto = () => {
     if (!editing?.id || !supabase || busy) { setNotice('Guarda el borrador antes de subir una foto.'); return; }
@@ -146,7 +166,7 @@ export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, 
         <Text style={styles.eyebrow}>CATÁLOGO</Text><Text style={styles.title}>Mis espacios</Text>
         {!editing ? <><Pressable accessibilityRole="button" onPress={() => { setPhotoPreview(null); setEditing({ ...blankDraft }); }} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Nuevo espacio</Text></Pressable>
           {drafts.map(draft => <Pressable key={draft.id} accessibilityRole="button" onPress={() => { if (draft.status === 'borrador' || draft.status === 'rechazado') openDraft(draft); }} style={styles.spaceCard}><SpaceLine name={draft.name || 'Espacio sin nombre'} detail={draft.area || 'Completa la zona'} badge={draft.status === 'en_revision' ? 'En revisión' : draft.status === 'aprobado' ? 'Validado' : draft.status === 'rechazado' ? 'Con observaciones' : 'Borrador'} />{draft.rejection_reason ? <Text style={styles.small}>{draft.rejection_reason}</Text> : null}</Pressable>)}
-          {spaces.map(space => <SpaceLine key={space.id} name={space.name} detail={space.area} badge={space.is_demo ? 'Muestra · sin ingresos' : space.is_published ? 'Publicado' : 'Pausado'} />)}
+          {spaces.map(space => <View key={space.id}><SpaceLine name={space.name} detail={space.area} badge={space.is_demo ? 'Muestra · sin ingresos' : space.is_published ? 'Publicado' : 'Pausado'} />{!space.is_demo ? <><Text style={styles.label}>Cerrar o liberar fechas</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateStrip}>{nextDates(30).map(date => { const closed = closures.some(item => item.space_id === space.id && item.closed_on === date.key); return <Pressable key={date.key} accessibilityRole="button" accessibilityLabel={`${date.label}: ${closed ? 'cerrado; liberar' : 'disponible; cerrar'}`} disabled={busy} onPress={() => toggleClosure(space.id, date.key, closed)} style={[styles.datePill, closed && styles.datePillClosed]}><Text style={[styles.datePillText, closed && styles.datePillTextClosed]}>{date.day} {date.number}</Text><Text style={[styles.datePillSub, closed && styles.datePillTextClosed]}>{closed ? 'Cerrado' : 'Disponible'}</Text></Pressable>; })}</ScrollView></> : null}</View>)}
           {!drafts.length && !spaces.length ? <Empty text="Aún no has agregado espacios." /> : null}</> : <>
           <View style={styles.formHead}><Text style={styles.section}>{editing.id ? 'Editar borrador' : 'Nuevo espacio'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Cerrar formulario" onPress={() => setEditing(null)}><Icon name="close" size={22} /></Pressable></View>
           <Field label="Nombre del espacio" value={editing.name} onChange={value => updateForm('name', value)} placeholder="Ej. Sala Centro" />
@@ -212,5 +232,6 @@ const styles = StyleSheet.create({
   incomeHero: { backgroundColor: palette.plum, borderRadius: 21, padding: 23, marginBottom: 21 }, incomeLabel: { color: palette.blush, fontSize: 12, fontWeight: '700' }, incomeValue: { color: palette.white, fontSize: 33, fontWeight: '900', marginTop: 9 }, incomeHint: { color: palette.blush, fontSize: 11, marginTop: 8 },
   formHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, field: { marginTop: 13 }, label: { color: palette.plum, fontSize: 12, fontWeight: '800', marginBottom: 6 }, input: { borderWidth: 1, borderColor: palette.line, borderRadius: 13, paddingHorizontal: 13, paddingVertical: 12, backgroundColor: palette.white, color: palette.plum, fontSize: 14, minHeight: 45 }, multiline: { minHeight: 88, textAlignVertical: 'top' }, chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, chip: { paddingHorizontal: 10, paddingVertical: 9, borderRadius: 10, backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line }, chipActive: { backgroundColor: palette.action, borderColor: palette.action }, chipText: { color: palette.plum, fontSize: 11, fontWeight: '700' }, chipTextActive: { color: palette.white }, rateRow: { flexDirection: 'row', gap: 9 }, rateField: { flex: 1 },
   photo: { width: '100%', height: 190, borderRadius: 14, backgroundColor: palette.blush, marginVertical: 12 },
+  dateStrip: { gap: 8, paddingBottom: 16 }, datePill: { minWidth: 76, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.white, alignItems: 'center' }, datePillClosed: { backgroundColor: palette.action, borderColor: palette.action }, datePillText: { color: palette.plum, fontSize: 12, fontWeight: '800' }, datePillSub: { color: palette.muted, fontSize: 10, marginTop: 2 }, datePillTextClosed: { color: palette.white },
   nav: { flexDirection: 'row', backgroundColor: palette.white, borderTopWidth: 1, borderColor: palette.line, paddingVertical: 9, paddingHorizontal: 5 }, navItem: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 3 }, navText: { color: palette.muted, fontSize: 10 }, navActive: { color: palette.action, fontWeight: '800' },
 });
