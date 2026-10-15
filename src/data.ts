@@ -16,6 +16,7 @@ export type Space = {
   amenities: string[];
   description: string;
   privacy: string;
+  isDemo: boolean;
   featured?: boolean;
 };
 
@@ -44,7 +45,7 @@ export const spaces: Space[] = [
     ],
     amenities: ['Internet rápido', 'Pantalla', 'Pizarrón', 'Videollamadas', 'Café'],
     description: 'Un espacio privado y luminoso para reunir a tu equipo, presentar ideas y tomar decisiones con todo listo al llegar.',
-    privacy: 'Sala cerrada y de uso exclusivo durante tu reserva.', featured: true,
+    privacy: 'Sala cerrada y de uso exclusivo durante tu reserva.', isDemo: true, featured: true,
   },
   {
     id: 'oficina-olivo', name: 'Oficina Olivo', area: 'Sector Oriente, Delicias', category: 'Oficina privada', capacity: 4,
@@ -56,7 +57,7 @@ export const spaces: Space[] = [
     ],
     amenities: ['Internet rápido', 'Monitor', 'Café', 'Enchufes', 'Climatización'],
     description: 'Una oficina tranquila para trabajar con concentración, atender llamadas y mantener tu día bajo control.',
-    privacy: 'Oficina independiente con puerta.',
+    privacy: 'Oficina independiente con puerta.', isDemo: true,
   },
   {
     id: 'mesa-colectiva', name: 'Mesa Colectiva', area: 'Centro, Delicias', category: 'Coworking', capacity: 1,
@@ -68,7 +69,7 @@ export const spaces: Space[] = [
     ],
     amenities: ['Internet rápido', 'Café', 'Enchufes', 'Área común'],
     description: 'Un lugar flexible para cambiar de ambiente, avanzar en tus proyectos y coincidir con otras personas.',
-    privacy: 'Área compartida; las llamadas se realizan en zonas designadas.',
+    privacy: 'Área compartida; las llamadas se realizan en zonas designadas.', isDemo: true,
   },
   {
     id: 'estudio-alamo', name: 'Estudio Álamo', area: 'Meoqui, Chihuahua', category: 'Oficina privada', capacity: 3,
@@ -80,7 +81,7 @@ export const spaces: Space[] = [
     ],
     amenities: ['Internet rápido', 'Proyector', 'Pizarrón', 'Climatización'],
     description: 'Un estudio cómodo para sesiones de trabajo pequeñas, reuniones privadas o proyectos de varios días.',
-    privacy: 'Espacio cerrado y de uso exclusivo durante tu reserva.',
+    privacy: 'Espacio cerrado y de uso exclusivo durante tu reserva.', isDemo: true,
   },
 ];
 
