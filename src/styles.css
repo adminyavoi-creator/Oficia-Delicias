@@ -108,6 +108,42 @@ button { -webkit-tap-highlight-color: transparent; }
   font-weight: 800;
 }
 
+.osm-picker-map {
+  position: relative;
+  width: 100%;
+  height: 230px;
+  overflow: hidden;
+  border: 1px solid #ead8d9;
+  border-radius: 16px;
+  background: #e8eee5;
+  touch-action: none;
+  cursor: grab;
+  isolation: isolate;
+}
+.osm-picker-map:active { cursor: grabbing; }
+.osm-picker-tiles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.osm-picker-tile { position: absolute; width: 256px; height: 256px; max-width: none; user-select: none; }
+.osm-location-marker {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  color: #fff;
+  background: #b54753;
+  box-shadow: 0 3px 10px #512d3740;
+  cursor: grab;
+  touch-action: none;
+}
+.osm-location-marker span { font-size: 16px; line-height: 1; }
+.osm-picker-controls { position: absolute; z-index: 3; top: 9px; right: 9px; display: grid; gap: 5px; }
+.osm-picker-controls button { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid #ead8d9; border-radius: 10px; color: #512d37; background: #fff; box-shadow: 0 2px 8px #512d371c; font-size: 18px; font-weight: 800; cursor: pointer; }
+.osm-picker-attribution { position: absolute; z-index: 3; right: 4px; bottom: 3px; padding: 2px 4px; border-radius: 4px; color: #384338; background: #ffffffdf; font: 9px/12px Arial, sans-serif; text-decoration: none; }
+
 .auth-video-background {
   position: absolute;
   inset: 0;

@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (15 de octubre de 2026):** Oficia comparte Vite + React + Capacitor 8 entre PWA y Android. El commit `be5a21b` está en `main` y Vercel reportó el despliegue web como correcto; Android 1.2.1 (código 4) continúa disponible para prueba interna. Supabase ya tiene aplicado el permiso que faltaba al esquema privado: los errores 403 de la comprobación de Operaciones impedían leer reservas y borradores después de la migración de horarios ocupados. Se verificaron consultas con los roles autenticados de cliente y anfitrión sin abrir la tabla privada. La interfaz ahora muestra errores de carga solo dentro de la pantalla afectada y permite reintentar. Android 1.2.2 (código 5) está compilado y firmado, pendiente de subir a Play. Los cuatro espacios son demostrativos; faltan banco, CLABE, fotos e inventario reales. Véase [el plan de perfiles](PLAN_PERFILES_Y_ANFITRIONES.md).
+**Estado actual (15 de octubre de 2026):** Oficia comparte Vite + React + Capacitor 8 entre PWA y Android. La web de producción carga el login y el panel autenticado. Supabase ya tiene las políticas, la función segura de publicación y el almacenamiento público de fotos aprobadas; el nuevo flujo se probó en una transacción revertida y no dejó ofertas de prueba. El alta de anfitrión incluye servicios, dirección privada para Operaciones y un minimapa OSM que se puede mover y acercar; tocar el mapa o arrastrar el pin actualiza latitud y longitud, obligatorias para enviar a revisión. El punto exacto se muestra a clientes tras la publicación aprobada. Las 12 pruebas, TypeScript y build web pasan. La sincronización Android pasa, pero no se pudo producir el AAB 1.2.3/código 6 porque este entorno no encuentra un JDK; Play Console conserva 1.2.1 como versión interna activa. Cinco capturas 9:16 sin datos personales están preparadas localmente, pero aún falta cargarlas en Play. Siguen pendientes la verificación en teléfono y los datos reales. Los cuatro espacios actuales son demostrativos; no se creó inventario real. Véase [el plan de perfiles](PLAN_PERFILES_Y_ANFITRIONES.md).
 
 ## Objetivo
 
@@ -17,7 +17,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 5. Favoritos, reservas y perfil | Completada | Secciones funcionales del prototipo | Guardar favoritos y consultar solicitudes durante la sesión |
 | 6. Filtros y datos locales | Completada | Filtro por capacidad/servicios y almacenamiento en el dispositivo | Favoritos y solicitudes se recuperan al abrir la app |
 | 7. Panel de anfitrión | Completada, solo consulta | Consulta solicitudes relacionadas con sus espacios | El anfitrión no valida depósitos ni autoriza rentas |
-| 8. Migración y verificación tecnológica | Completada | Vite + React + Capacitor 8; mantener Supabase y el PWA como una base compartida | Migración, build PWA, sincronización Android, AAB firmado y acceso a la web pública verificados. Las pruebas de dispositivo y autenticación nativa siguen en la fase de lanzamiento |
+| 8. Migración y verificación tecnológica | Completada con bloqueo de publicación Android | Vite + React + Capacitor 8; mantener Supabase y el PWA como una base compartida | Migración, build PWA, sincronización Android y acceso web verificados. Falta un JDK para generar y firmar el AAB 1.2.3; dispositivo y autenticación nativa requieren teléfono |
 | 9. Diseño de conexión real | Completada | `ARQUITECTURA_BACKEND.md` | Flujo cliente–anfitrión, datos y permisos definidos |
 | 10. Mapa en Explorar | Completada con datos de muestra | Mapa OpenStreetMap, arrastre, zoom, precios y acceso a las fichas | Marcadores aproximados identificados como muestra; coordenadas reales siguen pendientes |
 | 11. Ticket y depósitos por transferencia | Implementada; datos bancarios pendientes | Referencia única, CLABE validada, reporte de folio y validación exclusiva de Operaciones | El servidor impide confirmar antes de verificar el depósito; espacios de muestra nunca solicitan dinero |
@@ -30,7 +30,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Fotos de la ficha | Completada | Las miniaturas cambian la imagen principal y conservan nombres accesibles. |
 | Orden de resultados | Completada | Explorar puede ordenar por recomendación, menor precio o mayor capacidad; mantiene búsqueda, categoría, capacidad y servicios. |
 | Solicitud transparente | Completada | El ticket distingue solicitud, transferencia reportada y autorización; los importes de muestra no aceptan depósitos. |
-| Mapa, ubicación y acceso | Mapa de muestra implementado | OSM muestra precios y ubicaciones aproximadas de muestra. Los puntos reales y navegación se activan al recibir coordenadas verificadas. |
+| Mapa, ubicación y acceso | Mapa de muestra y selector de ubicación implementados | Explorar muestra coordenadas aproximadas para muestras; el alta de anfitrión permite elegir el punto exacto con mapa OSM arrastrable y zoom, y guarda latitud/longitud antes de revisión. Solo se hace pública la ubicación de una ficha aprobada. |
 | Ticket y depósito | Flujo de aplicación completo; CLABE pendiente | Ticket con referencia única, folio bancario, compartir resumen y bandeja de Operaciones; la cuenta aún no se captura. |
 | Calendario de disponibilidad | Horarios, cierres y rentas autorizadas | Se deshabilitan fechas y horas cerradas o ya reservadas; la base comparte únicamente inicio y fin de rentas autorizadas. El dueño bloquea hasta 30 días desde su panel; el servidor vuelve a validar antes de autorizar. |
 
@@ -50,9 +50,9 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Disponibilidad, horarios y confirmación real | En curso | Horario habitual, días de cierre, ocupación por rentas autorizadas y traslapes se validan en servidor; el selector consulta solo los intervalos. Falta ampliar la agenda del dueño a 180 días y probar con inventario real. |
 | Depósitos manuales por transferencia | Implementado, sin cuenta configurada | Faltan banco, CLABE, titular e instrucciones; sin ello la app bloquea el reporte del depósito |
 | Pagos automáticos, cancelaciones y facturación | Pendiente | No se cobrarán tarjetas ni emitirá recibos fiscales hasta definir proveedor y políticas |
-| Mapa y ubicaciones reales | Mapa OSM implementado con muestra | Falta cargar coordenadas verificadas del inventario real |
-| Publicación Android | Prueba interna `1.2.1` activa; `1.2.2` compilada | Un verificador Oficia puede instalarla. Faltan prueba en teléfono, huella Play App Signing en Google Auth, ficha/privacidad y prueba cerrada de 12 verificadores por 14 días antes de solicitar producción |
-| Recursos gráficos de ficha Google Play | Subidos y guardados como borrador | La ficha predeterminada es-419 ya tiene el ícono PNG RGBA 512 × 512 y portada JPEG 1024 × 500; Play Console confirmó el guardado y ambos recursos permanecieron tras recargar. No se publicó. La portada es ilustrativa. La ficha sigue incompleta: faltan descripciones y al menos dos capturas reales de teléfono/tablet. |
+| Mapa y ubicaciones reales | Selector OSM arrastrable implementado; inventario real pendiente | El envío requiere latitud y longitud. El mapa público solo obtiene coordenadas reales al publicar una ficha aprobada; faltan domicilios verificados del inventario |
+| Publicación Android | Prueba interna `1.2.1` activa; `1.2.3` bloqueada por JDK ausente | Configurar Java/JDK, generar y firmar el AAB, cargarlo al track interno y verificar en teléfono. Completar huella de Play App Signing en Google Auth, privacidad y prueba cerrada de 12 verificadores por 14 días antes de solicitar producción |
+| Recursos de ficha Google Play | Ícono, portada y textos guardados como borrador; cinco capturas listas localmente | Ficha predeterminada es-419. Falta cargar las capturas actuales en Play Console; no se publica a producción desde este paso. No se subirá información personal de perfil. |
 
 ## Decisiones registradas
 
@@ -69,7 +69,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 - Google Auth usa el proveedor de **Supabase Auth** en web y Android. Android usa el selector nativo de Google y entrega el token de identidad a Supabase; la web inicia OAuth con el mismo proveedor. Ambos caminos comparten usuario y RLS.
 - Google Auth Platform está configurada para Oficia como aplicación externa y usa Supabase Auth para web y Android. Los orígenes permitidos y las cuentas de prueba se administran en Google Cloud; el acceso web quedó verificado. Las credenciales privadas no se guardan en el repositorio ni en este plan.
 - El código local de Oficia ya migró de Expo/EAS a Vite 8.2.2 + React 19 + Capacitor 8.4.3, la misma familia tecnológica comprobada en Yavoi!. Gradle genera paquetes Android y el PWA usa los mismos componentes y proyecto Supabase; Android empaqueta el frontend en `dist` y no depende de Vercel para abrir.
-- Entorno local actual: Node 26, JDK 21 y Android SDK en `/opt/homebrew/share/android-commandlinetools`. El AAB 1.2.1 se publicó en prueba interna y el AAB 1.2.2 se compiló y firmó; `targetSdk` permanece en 36. ADB no pudo iniciar el servidor el 15 de octubre, así que instalación y Google Auth nativo siguen sin comprobarse.
+- Entorno verificado en esta sesión: Node y Android SDK disponibles, pero no se localizó Java/JDK ni `java_home`; `npm run android:sync` compila el frontend y sincroniza Capacitor, mientras `npm run android:aab` falla por runtime Java ausente. Play Console mantiene `1.2.1` en prueba interna; el cambio local a `1.2.3`/código 6 no está empaquetado todavía. `targetSdk` permanece en 36. La instalación y Google Auth nativo siguen sin comprobarse en teléfono.
 - El AAB se firma con una llave de carga local y excluida de Git. La llave y `android/upload-key.properties` deben respaldarse en un gestor seguro; no se publican en GitHub ni Vercel. Play App Signing tendrá su propia llave después de aceptar el flujo de Play Console.
 - La base de datos de Oficia está en el proyecto Supabase ya existente. Los identificadores de proyecto y organización se administran en los paneles de cada proveedor y se omiten de este plan público.
 - El repositorio público autorizado es [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). El commit `6131e0e` integra Vite + Capacitor y elimina la configuración Expo/EAS. La llave Android y los archivos de entorno están excluidos del control de versiones.
@@ -153,6 +153,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 | 15 oct 2026 | Corrección de lecturas tras Google Auth | Los registros de Supabase mostraron 403 (`42501`, permiso denegado para `private`) en `bookings` y `is_oficia_operations`. La migración de intervalos ocupados había revocado `USAGE` del esquema a `authenticated`. Una nueva migración restaura únicamente ese permiso; `private.operations_users` sigue sin SELECT directo. Las consultas de cliente y anfitrión pasan bajo RLS. Se retiraron los avisos globales de procesos internos y se añadió reintento contextual para reservas y panel del dueño. TypeScript, 12 pruebas, PWA, sincronización Android y AAB 1.2.2 firmado pasan. |
 | 15 oct 2026 | Publicación de la corrección web | Commit `be5a21b` publicado en `main`; GitHub confirmó el despliegue Vercel con estado `success`. La migración ya está aplicada en Supabase y se verificaron las consultas autenticadas de cliente y anfitrión. El AAB Android 1.2.2 está compilado y firmado; su carga a la prueba interna de Play sigue pendiente. |
+| 15 oct 2026 | Alta del anfitrión, minimapa y publicación de espacios | Se integraron amenidades seleccionables, latitud/longitud sincronizadas con un minimapa OpenStreetMap (toque o pin arrastrable), fotos privadas, revisión y publicación desde Operaciones. El servidor rechaza publicaciones sin coordenadas, servicios requeridos, horarios y tarifas. Las fotos se copian a un bucket público solo al aprobar; la dirección completa no aparece en el catálogo. Supabase aplicó `owner_space_publication`; una comprobación transaccional como anfitrión y Operaciones verificó publicación e idempotencia, luego revirtió el registro. La base sigue con 4 muestras y 0 ofertas reales. Security Advisor no encontró errores nuevos; quedan la protección de contraseñas filtradas desactivada y avisos informativos de índices sin uso. `npm test` (12), TypeScript y build web pasan. Android 1.2.3/código 6 y capturas actuales para Play siguen en curso. |
+| 15 oct 2026 | Verificación Android y capturas Play | `npm test` (12), TypeScript, build PWA y sincronización Android pasan. El AAB no se pudo generar porque este entorno no tiene Java/JDK. Cinco capturas de teléfono (720 × 1280, sin datos personales) están listas localmente; la carga a Play Console no se completó porque el navegador dejó la ficha y cambió a otra aplicación. No se publicó ni envió la ficha a revisión. |
 
 ## Correspondencia con los mockups
 
@@ -164,7 +166,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Selección de fecha y hora | Días cerrados y horarios ocupados por rentas autorizadas deshabilitados; Operaciones valida de nuevo al autorizar |
 | Favoritos y comprobante | Implementados; favoritos separados por cuenta y comprobante sin autorización de acceso |
 | Panel de dueño y Operaciones | Dueño crea borradores, consulta solicitudes e ingresos brutos de sus espacios; Operaciones revisa borradores, valida depósitos y autoriza |
-| Mapa | OpenStreetMap con precios y cuatro puntos aproximados de muestra; ubicaciones reales pendientes |
+| Mapa | Explorar muestra cuatro puntos aproximados; el alta de anfitrión cuenta con minimapa OSM arrastrable que actualiza latitud y longitud para la ficha real |
 | Chat con anfitrión | Pendiente de cuentas, anfitriones y mensajería real |
 | QR o boleto de acceso | Pendiente de confirmación real de la reserva |
 | Ticket y depósito | Implementados; banco, CLABE y titular pendientes de configuración |
@@ -172,12 +174,12 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Confirmar en qué plataforma se probó Google Auth y probar el perfil cliente con otra cuenta; comprobar que la elección no cambia al volver a entrar.
-2. Instalar la 1.2.2 desde la prueba interna y verificar en teléfono la experiencia de dueño: alta, Google Auth, selector de foto, borrador, revisión, cierres, solicitudes e ingresos. No promoverlo a producción sin esa prueba.
-3. Ampliar la agenda de cierres del dueño de 30 a 180 días. Probar selector, cierres y reglas con un espacio real y un anfitrión real antes de publicarlo.
-4. Definir reglas de comisiones, impuestos, liquidaciones, cancelaciones y devoluciones; después ampliar el historial financiero. Mantener $0 de ingresos reales mientras solo existan muestras.
-5. Completar ficha de Play, privacidad, seguridad de datos y eliminación de cuenta; reunir los 12 verificadores para la prueba cerrada de 14 días.
-6. Al final, cargar datos y fotos autorizados, banco/titular/CLABE reales y validar en campo disponibilidad, mapa, pagos y acceso. Completar el portal administrativo profesional descrito abajo.
+1. Publicar el código web actualizado y verificar el minimapa y el panel de Operaciones desde la web con una cuenta de anfitrión.
+2. Cargar en Play Console las cinco capturas preparadas, sin datos personales; guardar la ficha es-419 como borrador.
+3. Configurar Java/JDK en un entorno de compilación Android, generar y firmar la versión 1.2.3/código 6, subirla al track interno y verificar instalación/Google Auth en teléfono. No solicitar producción sin la prueba de dispositivo.
+4. Ampliar la agenda de cierres del dueño de 30 a 180 días y probarla con inventario real.
+5. Definir comisiones, impuestos, liquidaciones, cancelaciones y devoluciones; después ampliar el historial financiero.
+6. Cuando existan fotos e inventario autorizados, incorporar banco/titular/CLABE y validar disponibilidad, mapa y depósitos en campo. Completar el portal administrativo profesional descrito abajo.
 
 ## Fase final · Portal profesional de administración de Oficia
 
