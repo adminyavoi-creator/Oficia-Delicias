@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** la migración a Vite + React + Capacitor 8 comparte Supabase con la PWA y genera un AAB Android firmado con `targetSdk 36`; tipos, build web/PWA, sincronización Capacitor, Gradle release y firma pasan. El código está integrado en GitHub `main` y `https://oficia-delicias.vercel.app` muestra la nueva pantalla de acceso; Vercel sigue sin exponer metadatos del deployment al conector (403). En Play Console, el borrador **Oficia: espacios de trabajo** (`mx.oficia.delicias`, gratis, español latinoamericano) tiene activa la versión interna `1.0.0` para un verificador. El enlace interno ya está generado. La prueba en un teléfono Android, el acceso nativo con Google, la ficha y los requisitos para producción siguen pendientes. Para solicitar producción se requiere una prueba cerrada con 12 verificadores durante 14 días. Supabase conserva cuatro espacios de muestra y una solicitud; el inventario real sigue pendiente.
+**Estado actual (14 de octubre de 2026):** la migración a Vite + React + Capacitor 8 comparte Supabase con la PWA y genera un AAB Android firmado con `targetSdk 36`; tipos, build web/PWA, sincronización Capacitor, Gradle release y firma pasan. La experiencia marca los espacios y precios de muestra, oculta calificaciones ilustrativas, permite cambiar fotos de la ficha y ordenar por precio o capacidad. El código está integrado en GitHub `main` y `https://oficia-delicias.vercel.app` muestra la nueva pantalla de acceso; Vercel sigue sin exponer metadatos del deployment al conector (403). En Play Console, el borrador **Oficia: espacios de trabajo** (`mx.oficia.delicias`, gratis, español latinoamericano) tiene activa la versión interna `1.0.0` para un verificador. El enlace interno ya está generado. La prueba en un teléfono Android, el acceso nativo con Google, la ficha y los requisitos para producción siguen pendientes. Para solicitar producción se requiere una prueba cerrada con 12 verificadores durante 14 días. Supabase conserva cuatro espacios de muestra y una solicitud; el inventario real sigue pendiente.
 
 ## Objetivo
 
@@ -19,6 +19,16 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 7. Panel de anfitrión de demostración | Completada | Vista de solicitudes y cambio de estado local | Confirmar o rechazar una solicitud en el mismo dispositivo |
 | 8. Migración y verificación tecnológica | Completada | Vite + React + Capacitor 8; mantener Supabase y el PWA como una base compartida | Migración, build PWA, sincronización Android, AAB firmado y acceso a la web pública verificados. Las pruebas de dispositivo y autenticación nativa siguen en la fase de lanzamiento |
 | 9. Diseño de conexión real | Completada | `ARQUITECTURA_BACKEND.md` | Flujo cliente–anfitrión, datos y permisos definidos |
+
+## Mejora de experiencia · Mockups Oficia
+
+| Entrega | Estado | Resultado |
+| --- | --- | --- |
+| Catálogo de muestra claro | Completada | Las tarjetas y fichas identifican espacios de muestra y no muestran calificaciones ficticias. |
+| Fotos de la ficha | Completada | Las miniaturas cambian la imagen principal y conservan nombres accesibles. |
+| Orden de resultados | Completada | Explorar puede ordenar por recomendación, menor precio o mayor capacidad; mantiene búsqueda, categoría, capacidad y servicios. |
+| Solicitud transparente | Completada | El resumen distingue tarifa de muestra, disponibilidad por confirmar y ausencia de cobro. |
+| Mapa, ubicación y acceso | Pendiente de datos reales | Se incorporarán cuando haya direcciones/coordenadas verificadas y un proceso real de confirmación y recepción. |
 
 ## Fase 2 · Antes del lanzamiento
 
@@ -107,6 +117,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Publicación de la migración Vite/Capacitor | Commit `6131e0e` publicado en `main` de [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). La página pública de Oficia se recargó y mostró el título y la nueva pantalla de acceso. La conexión Vercel denegó la consulta de metadatos del deployment (403); el estado del build queda pendiente de revisar en el panel. Llave de firma y `.env.local` excluidos. |
 | 14 oct 2026 | AAB cargado a prueba interna | Play Console aceptó `app-release.aab` como borrador «Oficia Android 1.0.0» (`1.0.0`, `targetSdk 36`, tamaño aproximado 10.7 MB). No se publicó: Google advierte que no hay verificadores seleccionados y el track quedaría inaccesible. No se reutilizaron listas de pruebas de DeliCrunch ni Yavoi!. Falta elegir una cuenta autorizada para Oficia. |
 | 14 oct 2026 | Prueba interna publicada | Se creó la lista «Verificadores Oficia» con el verificador autorizado por el titular y se activó la versión «Oficia Android 1.0.0» en el track interno. Play Console confirma estado Activo, un verificador disponible y el enlace https://play.google.com/apps/internaltest/4701624000733155086. La versión aún no está aprobada ni publicada en producción; el nombre de descarga puede aparecer como `mx.oficia.delicias (unreviewed)`. |
+| 14 oct 2026 | Pulido de exploración según mockups | Las fotos de la ficha ahora se seleccionan desde miniaturas; el catálogo identifica los cuatro espacios como muestra y oculta estrellas/opiniones no verificadas. Se añadió orden por menor precio o mayor capacidad, compatible con los filtros existentes. El resumen de solicitud explica qué precio es ilustrativo y cuándo se confirma disponibilidad; no promete acceso ni cobro. `npm run typecheck` y `npm run build:web` pasan. |
+| 14 oct 2026 | Verificación del esquema remoto tras migración | Supabase `vfvqmlsgqxiarmbquhco` está `ACTIVE_HEALTHY`; hay 4 espacios (los 4 de muestra), 1 solicitud y RLS activo. Se inspeccionaron las políticas de lectura/creación/gestión. El listado remoto de migraciones está vacío pese a existir las tablas: la migración inicial fue aplicada manualmente desde SQL Editor. Conciliar el historial antes de gestionar DDL con CLI; no volver a aplicar la migración inicial. |
 
 ## Correspondencia con los mockups
 
@@ -114,7 +126,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | --- | --- |
 | Bienvenida e identidad | Implementada con Marco Oficia |
 | Inicio con búsqueda, categorías, promoción y espacios | Implementada con la paleta de Oficia |
-| Detalle con fotos, servicios, opiniones y botón de reserva | Implementada; opiniones y fotos son ilustrativas |
+| Detalle con fotos, servicios, opiniones y botón de reserva | Galería interactiva; catálogo de muestra identificado y reseñas ficticias ocultas |
 | Selección de fecha y hora | Implementada como solicitud; disponibilidad real pendiente |
 | Favoritos y comprobante | Implementados; el comprobante no autoriza acceso |
 | Panel de anfitrión | Conectado a Supabase y limitado por `spaces.host_id`; falta la prueba con una cuenta cliente distinta |
@@ -125,12 +137,13 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Recorrer el PWA con las cuentas cliente y anfitriona: login, catálogo, favoritos, solicitud y panel; confirmar que las nuevas pruebas respeten RLS.
-2. Instalar la versión interna desde el enlace de Play en un Android físico; verificar login con Google, flujo cliente y solicitud. Después de habilitar Play App Signing, registrar su huella de firma en Google Auth y repetir la prueba.
-3. Completar la ficha de Play, la política de privacidad, seguridad de datos y eliminación de cuenta; revisar el aviso no bloqueante que Play mostró al publicar.
-4. Preparar la prueba cerrada con 12 participantes de Oficia y mantenerla durante 14 días antes de solicitar acceso a producción.
-5. Verificar en el panel Vercel el build y sus logs cuando el equipo vuelva a estar accesible desde la conexión.
-6. Sustituir los espacios ilustrativos por inventario real antes de presentar Oficia como oferta operativa al público.
+1. Cerrar la prueba cliente–anfitrión con dos cuentas y revisar que las solicitudes de prueba lleguen al panel correcto. Las políticas RLS actuales se inspeccionaron: clientes leen lo propio y anfitriones lo vinculado a sus espacios; falta probarlo con ambas cuentas.
+2. Conciliar el historial de migraciones de Supabase antes de usar la CLI. Las tablas existen y RLS está activo, pero `list_migrations` devuelve una lista vacía; la migración inicial se ejecutó desde SQL Editor, así que no debe reaplicarse a ciegas.
+3. Recibir inventario real con fotos, dirección, tarifas, capacidad, horarios y amenidades. Solo entonces habilitar mapa, disponibilidad real, reseñas verificadas y QR de acceso.
+4. Instalar la versión interna desde el enlace de Play en un Android físico; verificar login con Google, flujo cliente y solicitud. Después de habilitar Play App Signing, registrar su huella de firma en Google Auth y repetir la prueba.
+5. Completar la ficha de Play, la política de privacidad, seguridad de datos y eliminación de cuenta; preparar 12 participantes de Oficia para la prueba cerrada de 14 días.
+6. Verificar en el panel Vercel el build y sus logs cuando el equipo vuelva a estar accesible desde la conexión; mantener el PWA como demo rápida con la misma base.
+7. Activar pagos solo después de definir proveedor, tarifas finales, comisiones, cancelaciones e impuestos. Completar el portal profesional de administración en la fase final de este plan.
 
 ## Fase final · Portal profesional de administración de Oficia
 
