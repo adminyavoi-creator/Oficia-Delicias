@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type IconName = 'home' | 'explore' | 'heart' | 'calendar' | 'user' | 'search' | 'filter' | 'pin' | 'back' | 'bell' | 'star' | 'wifi' | 'screen' | 'board' | 'projector' | 'coffee' | 'lock' | 'users' | 'arrow' | 'clock' | 'close' | 'check' | 'grid' | 'list' | 'info' | 'chevron' | 'plus' | 'minus' | 'ticket' | 'briefcase' | 'cowork' | 'share' | 'spark' | 'power' | 'snow';
+export type IconName = 'home' | 'explore' | 'heart' | 'calendar' | 'user' | 'search' | 'filter' | 'pin' | 'back' | 'bell' | 'star' | 'wifi' | 'screen' | 'board' | 'projector' | 'coffee' | 'lock' | 'users' | 'arrow' | 'refresh' | 'clock' | 'close' | 'check' | 'grid' | 'list' | 'info' | 'chevron' | 'plus' | 'minus' | 'ticket' | 'briefcase' | 'cowork' | 'share' | 'spark' | 'power' | 'snow';
 
 type Props = { name: IconName; size?: number; color?: string; filled?: boolean; strokeWidth?: number };
 
@@ -27,6 +27,7 @@ export function Icon({ name, size = 22, color = '#512D37', filled = false, strok
     case 'lock': drawing = <><rect x="5" y="10" width="14" height="11" rx="2" {...common} /><path d="M8 10V7a4 4 0 0 1 8 0v3" {...common} /><circle cx="12" cy="15" r="1" fill={color} /></>; break;
     case 'users': drawing = <><circle cx="8" cy="8" r="3" {...common} /><circle cx="17" cy="8" r="3" {...common} /><path d="M2 20v-3a5 5 0 0 1 10 0v3M12 20v-3a5 5 0 0 1 10 0v3" {...common} /></>; break;
     case 'arrow': drawing = <path d="M4 12h16m-7-7 7 7-7 7" {...common} />; break;
+    case 'refresh': drawing = <><path d="M20 8a8 8 0 1 0 1 6" {...common} /><path d="M20 3v5h-5" {...common} /></>; break;
     case 'clock': drawing = <><circle cx="12" cy="12" r="9" {...common} /><path d="M12 7v5l3 2" {...common} /></>; break;
     case 'close': drawing = <path d="M5 5 19 19M19 5 5 19" {...common} />; break;
     case 'check': drawing = <path d="m4 12 5 5L20 6" {...common} />; break;

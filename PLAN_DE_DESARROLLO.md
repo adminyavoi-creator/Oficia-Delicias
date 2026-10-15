@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (15 de octubre de 2026):** Oficia usa Vite + React + Capacitor 8, con una base para Android y PWA. El ticket de depósito, el panel de Operaciones y el mapa OpenStreetMap con ubicaciones de muestra ya están implementados. La vista personal de reservas y los favoritos se separan por cuenta; el cambio se publicó en GitHub `main` como `2bd9118`. El ticket ya puede compartirse como resumen y la bandeja personal permite actualizar estados. Las pruebas automatizadas, el build PWA y la sincronización Android pasan; GitHub reporta el chequeo de Vercel como `success` para `2bd9118` y para la actualización del plan. La revisión visual del dominio sigue pendiente. `npm run build` y `npx cap sync android` pasan; Vite avisa que el JavaScript principal supera 500 kB. GitHub reporta el chequeo de Vercel como `success`; la API del equipo devuelve 403 y la verificación visual del dominio fue denegada por el navegador de prueba. Tres migraciones nuevas aparecen aplicadas y registradas en Supabase. La CLABE sigue vacía porque faltan banco, titular y cuenta; los cuatro espacios son de muestra y no aceptan depósitos. Hay una solicitud en Supabase y no existe inventario real. No se ha generado un AAB nuevo: Gradle no encuentra Android SDK en este entorno. En Play Console, la prueba interna `1.0.0` sigue activa para un verificador; hace falta preparar y probar una actualización Android. Para solicitar producción se requiere una prueba cerrada con 12 verificadores durante 14 días.
+**Estado actual (15 de octubre de 2026):** Oficia usa una base compartida Vite + React + Capacitor 8 para PWA y Android. La elección «Busco espacio»/«Rento espacio», el perfil fijo en Supabase, el panel de dueño y la revisión de borradores por Operaciones están implementados; véase [el plan de perfiles](PLAN_PERFILES_Y_ANFITRIONES.md). Las cuatro cuentas existentes se clasificaron como 1 anfitrión y 3 clientes. Los ingresos de dueño cuentan solo depósitos verificados en espacios reales, por lo que hoy son $0 MXN. Las pruebas de permisos de base, pruebas automatizadas, compilación PWA y sincronización Android pasan. Aún faltan pruebas de interacción con cuentas nuevas, carga de fotos, inventario real y un AAB nuevo: el Android SDK no está disponible en este entorno. Los cuatro espacios publicados son demostrativos y nunca piden depósitos; faltan banco, titular y CLABE reales. La prueba interna 1.0.0 de Play sigue activa para un verificador. El despliegue visual público sigue sin revisión autorizada, aunque GitHub muestra `success` para el último cambio publicado.
 
 ## Objetivo
 
@@ -37,6 +37,9 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 | Tarea | Estado | Dependencia |
 | --- | --- | --- |
+| Una app, dos perfiles fijos | Implementado en código y base; publicación pendiente | Elección antes del alta, cuentas existentes preservadas; probar correo/Google con nuevas cuentas |
+| Panel de dueño y borradores | Implementado con revisión interna | Fotos, dirección, horarios y publicación comercial pendientes de inventario real |
+| Ingresos del dueño | Bruto verificado por espacio implementado | Comisiones, impuestos y liquidaciones aún por definir |
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
 | Cuentas, roles y sincronización cliente ↔ anfitrión | En curso | RLS separa cliente, anfitrión y Operaciones. “Mis reservas” filtra por titular y Favoritos se guarda por cuenta; falta prueba funcional con una segunda cuenta real |
 | Pantalla inicial de acceso y cierre de sesión | Completada | Login de Oficia y salida desde Perfil implementados; verificado en una sesión web limpia en producción |
@@ -133,6 +136,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Preparación de la siguiente entrega Android | `npm run build` y `npx cap sync android` pasan. Gradle encontró el JDK 21, pero no hay Android SDK ni `android/local.properties` en este entorno; `bundleRelease` se detuvo antes de compilar. No se produjo un AAB nuevo. |
 | 15 oct 2026 | Privacidad entre cuentas | La bandeja personal filtra por `client_id`, aunque Operaciones vea todas las solicitudes; Favoritos usa almacenamiento por cuenta y se limpia la sesión al salir. Prueba automatizada con dos titulares, compilación PWA y sincronización Android correctas. Publicado como `2bd9118`; Vercel reporta `success`. Falta probar el cambio en dos cuentas reales y en Android instalado. |
 | 15 oct 2026 | Ticket compartible y actualización de reservas | El cliente puede compartir el resumen de su ticket por el sistema del dispositivo o copiarlo si no hay menú de compartir. La muestra se marca como demostración sin acceso ni depósito. “Mis reservas” permite recargar su estado. Tipos, pruebas, PWA y sincronización Android correctas; falta verificar la interacción en dispositivos instalados. |
+| 15 oct 2026 | Dos perfiles en una app | `oficia_profiles` inmutable y `space_drafts` con RLS aplicados en Supabase. Elección inicial para correo y Google, panel de dueño con espacios, solicitudes e ingresos brutos, revisión de borradores por Operaciones. La base probó bloqueo de cambio de perfil, reserva por anfitrión y borrador incompleto; 1 anfitrión y 3 clientes migrados. Tres pruebas automatizadas, build PWA y sincronización Android pasan. Publicación y prueba visual pendientes. |
 
 ## Correspondencia con los mockups
 
@@ -152,12 +156,12 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Verificar con dos cuentas reales que “Mis reservas” y Favoritos permanecen separados, y que Operaciones recibe una transferencia reportada sin exponer otras reservas en la bandeja personal.
-2. Resolver el Android SDK del entorno, compilar un AAB con nuevo `versionCode` y probar Google Auth, solicitud y ticket en un teléfono antes de actualizar la prueba interna.
-3. Revisar visualmente el despliegue público cuando el navegador de prueba autorice abrir el dominio. El chequeo del build de Vercel por GitHub sí puede verificarse.
-4. Completar ficha de Play, privacidad, seguridad de datos y eliminación de cuenta; conseguir 12 verificadores para la prueba cerrada de 14 días.
-5. Implementar calendario operativo, bloqueo de horarios y portal administrativo de la fase final. Mantener transferencias desactivadas hasta que Operaciones configure banco, titular y CLABE reales.
-6. Al final, incorporar inventario autorizado con fotos, direcciones, coordenadas, tarifas y horarios; validar mapa, disponibilidad, acceso y reseñas con datos reales.
+1. Publicar y probar el nuevo flujo de perfiles con dos cuentas nuevas, una por correo y otra con Google, y comprobar que la elección no cambia al volver a entrar.
+2. Verificar la experiencia de dueño en Android instalado: alta, borrador, revisión, solicitudes e ingresos. Generar AAB nuevo cuando el Android SDK esté disponible.
+3. Completar fotos en Storage, dirección y coordenadas verificables, horarios por espacio, calendario de cierres y publicación desde Operaciones antes de recibir inventario real.
+4. Definir reglas de comisiones, impuestos, liquidaciones, cancelaciones y devoluciones; después ampliar el historial financiero. Mantener $0 de ingresos reales mientras solo existan muestras.
+5. Completar ficha de Play, privacidad, seguridad de datos y eliminación de cuenta; reunir los 12 verificadores para la prueba cerrada de 14 días.
+6. Al final, cargar datos y fotos autorizados, banco/titular/CLABE reales y validar en campo disponibilidad, mapa, pagos y acceso. Completar el portal administrativo profesional descrito abajo.
 
 ## Fase final · Portal profesional de administración de Oficia
 
