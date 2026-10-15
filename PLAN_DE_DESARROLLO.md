@@ -1,6 +1,6 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (14 de octubre de 2026):** la migración a Vite + React + Capacitor 8 comparte Supabase con la PWA y genera un AAB Android firmado con `targetSdk 36`; tipos, build web/PWA, sincronización Capacitor, Gradle release y firma pasan. El código está integrado en GitHub `main` (commit `6131e0e`) y `https://oficia-delicias.vercel.app` muestra la nueva pantalla de acceso. En Play Console se creó el borrador **Oficia: espacios de trabajo** (`mx.oficia.delicias`, gratis, español latinoamericano) y se cargó el AAB a un borrador de prueba interna `1.0.0` con `targetSdk 36`. La versión permanece sin publicar: Google indica que no hay verificadores seleccionados, y falta confirmar qué cuenta autoriza el titular. Para solicitar producción se requiere una prueba cerrada con 12 verificadores durante 14 días; además falta completar la ficha. La prueba en un teléfono Android y el acceso nativo con Google siguen pendientes. Supabase conserva cuatro espacios de muestra y una solicitud; el inventario real sigue pendiente.
+**Estado actual (14 de octubre de 2026):** la migración a Vite + React + Capacitor 8 comparte Supabase con la PWA y genera un AAB Android firmado con `targetSdk 36`; tipos, build web/PWA, sincronización Capacitor, Gradle release y firma pasan. El código está integrado en GitHub `main` (último commit del plan: `45e663d`) y `https://oficia-delicias.vercel.app` muestra la nueva pantalla de acceso; Vercel sigue sin exponer metadatos del deployment al conector (403). En Play Console, el borrador **Oficia: espacios de trabajo** (`mx.oficia.delicias`, gratis, español latinoamericano) tiene activa la versión interna `1.0.0` para un verificador. El enlace interno ya está generado. La prueba en un teléfono Android, el acceso nativo con Google, la ficha y los requisitos para producción siguen pendientes. Para solicitar producción se requiere una prueba cerrada con 12 verificadores durante 14 días. Supabase conserva cuatro espacios de muestra y una solicitud; el inventario real sigue pendiente.
 
 ## Objetivo
 
@@ -17,7 +17,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 5. Favoritos, reservas y perfil | Completada | Secciones funcionales del prototipo | Guardar favoritos y consultar solicitudes durante la sesión |
 | 6. Filtros y datos locales | Completada | Filtro por capacidad/servicios y almacenamiento en el dispositivo | Favoritos y solicitudes se recuperan al abrir la app |
 | 7. Panel de anfitrión de demostración | Completada | Vista de solicitudes y cambio de estado local | Confirmar o rechazar una solicitud en el mismo dispositivo |
-| 8. Migración y verificación tecnológica | En curso | Vite + React + Capacitor 8; mantener Supabase y el PWA como una base compartida | Migración local, build PWA, sincronización Android y AAB firmado verificados. Falta desplegar la PWA, probar Android físico y cerrar login nativo |
+| 8. Migración y verificación tecnológica | Completada | Vite + React + Capacitor 8; mantener Supabase y el PWA como una base compartida | Migración, build PWA, sincronización Android, AAB firmado y acceso a la web pública verificados. Las pruebas de dispositivo y autenticación nativa siguen en la fase de lanzamiento |
 | 9. Diseño de conexión real | Completada | `ARQUITECTURA_BACKEND.md` | Flujo cliente–anfitrión, datos y permisos definidos |
 
 ## Fase 2 · Antes del lanzamiento
@@ -32,7 +32,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Disponibilidad, horarios y confirmación real del anfitrión | Pendiente | Reglas de operación y calendario |
 | Pagos, cancelaciones y facturación | Pendiente | Proveedor de pagos y políticas comerciales |
 | Mapas y ubicación | Pendiente | Direcciones reales y proveedor de mapas |
-| Publicación Android | En curso | Borrador Play creado y AAB cargado a una versión interna en borrador; falta confirmar una cuenta de prueba, publicar el track interno, terminar ficha/privacidad y datos, probar en teléfono, registrar huella Play App Signing y completar la prueba cerrada de 12 verificadores por 14 días antes de solicitar producción |
+| Publicación Android | En curso | Track de prueba interna activo con AAB `1.0.0` y un verificador Oficia; faltan ficha/privacidad y datos, prueba en teléfono, huella Play App Signing en Google Auth y prueba cerrada de 12 verificadores por 14 días antes de solicitar producción |
 
 ## Decisiones registradas
 
@@ -106,6 +106,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 14 oct 2026 | Auditoría de dependencias | `npm audit --omit=dev` reporta 0 vulnerabilidades de producción. La auditoría completa reporta 21 avisos solo en dependencias de desarrollo; la corrección forzada requeriría subir React Native de tipos a 0.87.1 con cambio mayor, por lo que no se aplicó automáticamente. |
 | 14 oct 2026 | Publicación de la migración Vite/Capacitor | Commit `6131e0e` publicado en `main` de [adminyavoi-creator/Oficia-Delicias](https://github.com/adminyavoi-creator/Oficia-Delicias). La página pública de Oficia se recargó y mostró el título y la nueva pantalla de acceso. La conexión Vercel denegó la consulta de metadatos del deployment (403); el estado del build queda pendiente de revisar en el panel. Llave de firma y `.env.local` excluidos. |
 | 14 oct 2026 | AAB cargado a prueba interna | Play Console aceptó `app-release.aab` como borrador «Oficia Android 1.0.0» (`1.0.0`, `targetSdk 36`, tamaño aproximado 10.7 MB). No se publicó: Google advierte que no hay verificadores seleccionados y el track quedaría inaccesible. No se reutilizaron listas de pruebas de DeliCrunch ni Yavoi!. Falta elegir una cuenta autorizada para Oficia. |
+| 14 oct 2026 | Prueba interna publicada | Se creó la lista «Verificadores Oficia» con el verificador autorizado por el titular y se activó la versión «Oficia Android 1.0.0» en el track interno. Play Console confirma estado Activo, un verificador disponible y el enlace https://play.google.com/apps/internaltest/4701624000733155086. La versión aún no está aprobada ni publicada en producción; el nombre de descarga puede aparecer como `mx.oficia.delicias (unreviewed)`. |
 
 ## Correspondencia con los mockups
 
@@ -124,11 +125,12 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 
 ## Próximo paso concreto
 
-1. Verificar en el panel Vercel el build ligado al commit `6131e0e` y revisar sus logs cuando el equipo vuelva a estar accesible desde la conexión.
-2. Recorrer el PWA con las cuentas cliente y anfitriona: login, catálogo, favoritos, solicitud y panel; confirmar que las nuevas pruebas respeten RLS.
-3. Después de confirmar una cuenta de verificación de Oficia, asignarla al track interno y publicar la prueba; completar la firma de Play App Signing, registrarla en Google Auth y probar acceso en un teléfono físico. Antes de aceptar cualquier acuerdo de firma que presente Play Console, pedir confirmación al titular en el momento.
-4. Preparar ficha, política de privacidad, declaración de seguridad de datos y solicitud de eliminación de cuenta. Revisar la elegibilidad del equipo para producción: las cuentas personales creadas después del 13 de noviembre de 2023 requieren prueba cerrada con 12 participantes durante 14 días.
-5. Sustituir los espacios ilustrativos por inventario real antes de presentar Oficia como oferta operativa al público.
+1. Recorrer el PWA con las cuentas cliente y anfitriona: login, catálogo, favoritos, solicitud y panel; confirmar que las nuevas pruebas respeten RLS.
+2. Instalar la versión interna desde el enlace de Play en un Android físico; verificar login con Google, flujo cliente y solicitud. Después de habilitar Play App Signing, registrar su huella de firma en Google Auth y repetir la prueba.
+3. Completar la ficha de Play, la política de privacidad, seguridad de datos y eliminación de cuenta; revisar el aviso no bloqueante que Play mostró al publicar.
+4. Preparar la prueba cerrada con 12 participantes de Oficia y mantenerla durante 14 días antes de solicitar acceso a producción.
+5. Verificar en el panel Vercel el build y sus logs cuando el equipo vuelva a estar accesible desde la conexión.
+6. Sustituir los espacios ilustrativos por inventario real antes de presentar Oficia como oferta operativa al público.
 
 ## Fase final · Portal profesional de administración de Oficia
 
