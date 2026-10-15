@@ -34,6 +34,7 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
   const [editing, setEditing] = useState<DraftForm | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [loadError, setLoadError] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -54,10 +55,11 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
     setClosures((closureResult.data ?? []) as Closure[]);
     setDrafts((draftsResult.data ?? []) as Draft[]);
     setBookings(((requests.data ?? []) as OwnerBooking[]).filter(booking => ids.has(booking.space_id)));
+    setLoadError(false);
   }, [userId]);
   useEffect(() => {
     let active = true;
-    refresh().catch(() => { if (active) setNotice('No se pudieron actualizar tus espacios.'); });
+    refresh().catch(() => { if (active) setLoadError(true); });
     return () => { active = false; };
   }, [refresh]);
 
@@ -154,16 +156,17 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
 
   return <View style={styles.root}>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      <View style={styles.header}><Brand compact /><Pressable accessibilityRole="button" accessibilityLabel="Actualizar panel" onPress={() => refresh().catch(() => setNotice('No se pudo actualizar el panel.'))} style={styles.refresh}><Icon name="refresh" size={19} color={palette.action} /></Pressable></View>
+      <View style={styles.header}><Brand compact /><Pressable accessibilityRole="button" accessibilityLabel="Actualizar panel" onPress={() => { void refresh().catch(() => setLoadError(true)); }} style={styles.refresh}><Icon name="refresh" size={19} color={palette.action} /></Pressable></View>
       {notice ? <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text> : null}
-      {tab === 'Inicio' && <>
+      {loadError && tab !== 'Perfil' ? <View><Empty text="No pudimos cargar tus espacios." /><Pressable accessibilityRole="button" onPress={() => { void refresh().catch(() => setLoadError(true)); }} style={styles.secondary}><Text style={styles.secondaryText}>Reintentar</Text></Pressable></View> : null}
+      {tab === 'Inicio' && !loadError && <>
         <Text style={styles.eyebrow}>TU ACTIVIDAD</Text><Text style={styles.title}>Hola, {profileName.split(' ')[0]}.</Text><Text style={styles.small}>Tu espacio también trabaja para ti.</Text>
         <View style={styles.stats}><Stat label="Solicitudes" value={String(waiting)} /><Stat label="Espacios" value={String(spaces.filter(space => !space.is_demo).length + drafts.length)} /><Stat label="Ingresos confirmados" value={formatMoney(gross)} wide /></View>
         <Text style={styles.section}>Mis espacios</Text>
         {spaces.filter(space => !space.is_demo).length || drafts.length ? <>{spaces.filter(space => !space.is_demo).map(space => <SpaceLine key={space.id} name={space.name} detail={space.area} badge={space.is_published ? 'Publicado' : 'Pausado'} />)}{drafts.slice(0, 3).map(draft => <SpaceLine key={draft.id} name={draft.name || 'Espacio sin nombre'} detail={draft.area || 'Completa la zona'} badge={draft.status === 'en_revision' ? 'En revisión' : draft.status === 'aprobado' ? 'Validado' : draft.status === 'rechazado' ? 'Con observaciones' : 'Borrador'} />)}</> : <Empty text="Agrega tu primer espacio para comenzar." />}
         <Pressable accessibilityRole="button" onPress={() => { setTab('Espacios'); setPhotoPreview(null); setEditing({ ...blankDraft }); }} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Agregar espacio</Text></Pressable>
       </>}
-      {tab === 'Espacios' && <>
+      {tab === 'Espacios' && !loadError && <>
         <Text style={styles.eyebrow}>CATÁLOGO</Text><Text style={styles.title}>Mis espacios</Text>
         {!editing ? <><Pressable accessibilityRole="button" onPress={() => { setPhotoPreview(null); setEditing({ ...blankDraft }); }} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Nuevo espacio</Text></Pressable>
           {drafts.map(draft => <Pressable key={draft.id} accessibilityRole="button" onPress={() => { if (draft.status === 'borrador' || draft.status === 'rechazado') openDraft(draft); }} style={styles.spaceCard}><SpaceLine name={draft.name || 'Espacio sin nombre'} detail={draft.area || 'Completa la zona'} badge={draft.status === 'en_revision' ? 'En revisión' : draft.status === 'aprobado' ? 'Validado' : draft.status === 'rechazado' ? 'Con observaciones' : 'Borrador'} />{draft.rejection_reason ? <Text style={styles.small}>{draft.rejection_reason}</Text> : null}</Pressable>)}
@@ -193,11 +196,11 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
           <Text style={styles.small}>Operaciones revisa los datos antes de publicar. Ningún borrador acepta reservas.</Text>
         </>}
       </>}
-      {tab === 'Solicitudes' && <><Text style={styles.eyebrow}>AGENDA</Text><Text style={styles.title}>Solicitudes e historial</Text>
+      {tab === 'Solicitudes' && !loadError && <><Text style={styles.eyebrow}>AGENDA</Text><Text style={styles.title}>Solicitudes e historial</Text>
         {bookings.length ? bookings.map(booking => <View key={booking.id} style={styles.booking}><View style={styles.line}><Text style={styles.cardTitle}>{spaceName(booking.space_id)}</Text><Text style={styles.badge}>{booking.status === 'confirmada' ? 'Autorizada' : booking.status === 'rechazada' ? 'Rechazada' : 'Pendiente'}</Text></View><Text style={styles.small}>{formatDate(booking.local_date)} · {booking.local_time.slice(0, 5)} · {booking.quantity} {booking.unit.toLowerCase()}</Text><Text style={styles.amount}>{formatMoney(booking.total_cents / 100)}</Text><Text style={styles.small}>Depósito: {booking.payment_status === 'verificado' ? 'validado' : booking.payment_status === 'reportado' ? 'en revisión' : 'pendiente'}</Text></View>) : <Empty text="Las solicitudes para tus espacios aparecerán aquí." />}
         <Text style={styles.small}>Operaciones valida los depósitos y autoriza las rentas.</Text>
       </>}
-      {tab === 'Ingresos' && <><Text style={styles.eyebrow}>RESULTADOS</Text><Text style={styles.title}>Ingresos por espacio</Text><View style={styles.incomeHero}><Text style={styles.incomeLabel}>Depósitos validados · importe bruto</Text><Text style={styles.incomeValue}>{formatMoney(gross)}</Text><Text style={styles.incomeHint}>No incluye espacios de muestra ni solicitudes pendientes.</Text></View>
+      {tab === 'Ingresos' && !loadError && <><Text style={styles.eyebrow}>RESULTADOS</Text><Text style={styles.title}>Ingresos por espacio</Text><View style={styles.incomeHero}><Text style={styles.incomeLabel}>Depósitos validados · importe bruto</Text><Text style={styles.incomeValue}>{formatMoney(gross)}</Text><Text style={styles.incomeHint}>No incluye espacios de muestra ni solicitudes pendientes.</Text></View>
         {spaces.filter(space => !space.is_demo).length ? spaces.filter(space => !space.is_demo).map(space => { const count = revenue.confirmed.filter(booking => booking.space_id === space.id).length; return <View key={space.id} style={styles.booking}><View style={styles.line}><Text style={styles.cardTitle}>{space.name}</Text><Text style={styles.amount}>{formatMoney((revenue.bySpaceCents.get(space.id) ?? 0) / 100)}</Text></View><Text style={styles.small}>{count} {count === 1 ? 'renta autorizada' : 'rentas autorizadas'}</Text></View>; }) : <Empty text="Los ingresos de espacios reales aparecerán aquí cuando Operaciones valide un depósito." />}
         <Text style={styles.small}>Los importes son brutos. Comisiones, impuestos y liquidaciones aún no están configurados.</Text>
       </>}
