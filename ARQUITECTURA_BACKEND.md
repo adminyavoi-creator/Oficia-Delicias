@@ -2,7 +2,11 @@
 
 **Estado actual:** Vite + React + Capacitor 8 comparten la app Android, la PWA y Supabase Auth/Database. Las migraciones de reservas, depósitos, perfiles, horarios, cierres e intervalos ocupados están aplicadas al proyecto de Oficia. Hay cuatro espacios publicados de muestra; no existe inventario real ni una cuenta bancaria configurada. El mapa OpenStreetMap usa coordenadas aproximadas solo para las fichas de demostración.
 
-## Flujo de solicitud, depósito y autorización
+## Estado de operación vigente · solo tickets (15 oct 2026)
+
+Oficia registra solicitudes y muestra tickets informativos con renta base, comisión hipotética de 15%, IVA estimado sobre esa comisión y referencia para el dueño. La aplicación no recibe, retiene, cobra, verifica ni concilia dinero. No solicita CLABE, folios bancarios o comprobantes; los importes no son ingresos realizados, CFDI ni confirmaciones de disponibilidad. La migración `20261015204951_ticket_only_no_payment_access.sql` revoca las rutas de actualización de pagos en `bookings` y el acceso de clientes a `transfer_settings`; conserva registros históricos. Las secciones de depósitos siguientes documentan el diseño anterior y no describen la operación vigente.
+
+## Diseño histórico suspendido · solicitud, depósito y autorización
 
 1. La persona explora el catálogo y ve el precio vigente por hora. El mapa marca los espacios con ubicación; las fichas de muestra muestran coordenadas y precios ilustrativos.
 2. Al enviar una solicitud, Supabase calcula inicio, salida y total a partir de las tarifas guardadas. La base genera una referencia única `OF-########` y conserva la solicitud en estado `pendiente`.
@@ -32,7 +36,7 @@ Estados de pago: `pendiente` → `reportado` → `verificado` o `rechazado`. Sol
 - RLS está activo en `spaces`, `bookings`, `transfer_settings`, `oficia_profiles` y `space_drafts`. El cliente consulta y reporta solo sus solicitudes; el anfitrión consulta las de sus espacios; Operaciones consulta y valida solicitudes.
 - Los permisos de Operaciones viven en un esquema privado. La app consulta una función de solo lectura que devuelve si la sesión actual tiene ese rol. La base vuelve a verificar el rol al ejecutar cada escritura.
 - El tipo de perfil se registra una sola vez, permanece fijo aunque se use otro método de acceso, y un trigger impide crear reservas desde una cuenta anfitriona. El dueño puede guardar borradores y enviarlos a revisión; ni su validación ni su edición los publican.
-- Los ingresos del dueño suman solo rentas `confirmada` con pago `verificado` en espacios reales propios. Son importes brutos, no ganancias netas ni liquidaciones. Las cuatro muestras no generan ingresos reales.
+- Los ingresos del dueño suman solo rentas `confirmada` con pago `verificado` en espacios reales propios. La migración `booking_fee_breakdown` fija en columnas generadas por Postgres la comisión estimada del 15%, el IVA estimado de 16% sobre la comisión y el saldo estimado antes de impuestos de renta/retenciones del anfitrión. Son cifras operativas derivadas de la renta base, no importes fiscales, CFDI, constancias ni evidencia de liquidación. No se modelan aún impuestos de renta, retenciones ni flujo de fondos. Las cuatro muestras no generan ingresos reales.
 - Los triggers rechazan cambios de cliente a campos originales de la solicitud y prohíben a Operaciones alterar esos campos mientras revisa el pago. La cuenta, el precio y la referencia no se reciben desde el navegador al crear una solicitud.
 - La llave `service_role` no se usa en la app, PWA ni Android. Banco y CLABE son datos que el cliente puede ver, pero solo Operaciones puede cambiarlos.
 - La persona administradora existente quedó habilitada como primer usuario de Operaciones en la base. No se almacena su correo en el repositorio.
@@ -61,6 +65,7 @@ Las ocho migraciones posteriores al esquema inicial están aplicadas en Supabase
 ## Próximos datos necesarios para operar con clientes reales
 
 - Banco, CLABE de 18 dígitos, titular de la cuenta e instrucciones de transferencia. Se capturan desde el panel de Operaciones; las muestras conocidas por Banco de México sirven solo para verificar el algoritmo, nunca como cuenta de Oficia.
+- Dictamen fiscal/contractual antes del cobro real: carácter de Oficia en la operación, flujo de cobranza/liquidación, IVA de la renta y comisión, retenciones federales/estatales, datos fiscales de anfitriones, obligaciones de intermediación digital y emisión de CFDI/constancias. Referencia de trabajo: `CRITERIO_FISCAL_Y_DESGLOSE.md`.
 - Inventario aprobado: nombre, fotos, dirección, coordenadas, tarifas, capacidad, amenidades, horarios y reglas por espacio.
 - Prueba de una solicitud y reporte de transferencia con una cuenta cliente diferente. Usar importes y transferencias ficticias; no transferir dinero para validar el prototipo.
 

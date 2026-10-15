@@ -1,6 +1,13 @@
 # Plan de desarrollo · Oficia
 
-**Estado actual (15 de octubre de 2026):** Oficia comparte Vite + React + Capacitor 8 entre PWA y Android. El alta de anfitrión incluye amenidades, dirección privada para Operaciones, carga privada de foto y minimapa OSM arrastrable; el servidor exige coordenadas, tarifas, horario e internet antes de publicar. Operaciones publica con una función segura y copia la foto al almacenamiento público solo al aprobar. La migración se probó con una publicación transaccional revertida; siguen 4 espacios de muestra y 0 ofertas reales. Las 12 pruebas, TypeScript, build web y sincronización Android pasan. OpenJDK 21 ya estaba instalado por Homebrew; con `JAVA_HOME` y Android SDK se generó y firmó el AAB 1.2.3/código 6, disponible en prueba interna. La ficha es-419 tiene texto, ícono, portada y siete capturas por categoría de teléfono, tablet de 7 pulgadas (la opción de Console más cercana a 8 pulgadas) y tablet de 10 pulgadas; la categoría, el correo de contacto y el sitio se guardaron en Console. El usuario confirmó diseño manual y se guardó la declaración «No etiquetar recursos». La ficha quedó lista para enviar a revisión, pero no se envió a revisión ni se publicó la app. Las imágenes de tablet son redimensionamientos centrados de capturas de teléfono, no capturas nativas de la app ejecutándose en tablet. El orden de las tarjetas en Console no coincide todavía con la secuencia numerada; queda reordenarlas antes de enviar la ficha. Falta instalar y verificar el AAB en teléfono, completar el ciclo de lanzamiento y cargar datos reales. Producción no se modificó. Véase [el plan de perfiles](PLAN_PERFILES_Y_ANFITRIONES.md).
+## Decisión vigente · 15 oct 2026
+
+La aplicación opera **solo con tickets informativos**. La solicitud muestra folio e importe estimado; el dueño ve renta base, comisión hipotética de Oficia del 15%, IVA estimado sobre esa comisión y referencia neta antes de sus impuestos. Ninguna cifra implica cobro, ingreso confirmado o liquidación. Se retiraron CLABE, reporte de transferencia y validación de depósitos de las pantallas; una migración revoca las rutas de actualización de pagos en la API. Las referencias a depósitos en el historial de abajo son hitos anteriores, no funciones activas.
+
+**Pendientes prioritarios:** validar tickets y desglose con cuentas cliente/dueño reales; probar publicación de un espacio y foto real cuando exista inventario; comprobar PWA y Android en teléfono; definir con asesor fiscal/contratos el modelo antes de cualquier flujo de dinero.
+
+
+**Estado actual (15 de octubre de 2026):** Oficia comparte Vite + React + Capacitor 8 entre PWA y Android. El alta de anfitrión incluye amenidades, dirección privada para Operaciones, carga privada de foto y minimapa OSM arrastrable; el servidor exige coordenadas, tarifas, horario e internet antes de publicar. Operaciones publica con una función segura y copia la foto al almacenamiento público solo al aprobar. La migración se probó con una publicación transaccional revertida; siguen 4 espacios de muestra y 0 ofertas reales. El desglose de comisión está guardado como columnas generadas de Supabase y se verificó la estructura aplicada. Las 14 pruebas, TypeScript, build web y sincronización Android pasan. OpenJDK 21 ya estaba instalado por Homebrew; con `JAVA_HOME` y Android SDK se generó y firmó el AAB 1.2.3/código 6, disponible en prueba interna. La ficha es-419 tiene texto, ícono, portada y siete capturas por categoría de teléfono, tablet de 7 pulgadas (la opción de Console más cercana a 8 pulgadas) y tablet de 10 pulgadas; la categoría, el correo de contacto y el sitio se guardaron en Console. El usuario confirmó diseño manual y se guardó la declaración «No etiquetar recursos». La ficha quedó lista para enviar a revisión, pero no se envió a revisión ni se publicó la app. Las imágenes de tablet son redimensionamientos centrados de capturas de teléfono, no capturas nativas de la app ejecutándose en tablet. El orden de las tarjetas en Console no coincide todavía con la secuencia numerada; queda reordenarlas antes de enviar la ficha. Falta instalar y verificar el AAB en teléfono, completar el ciclo de lanzamiento y cargar datos reales. El track de producción de Play no se modificó; Supabase recibió la migración aditiva de importes y el bloqueo de rutas de pago. Véase [el plan de perfiles](PLAN_PERFILES_Y_ANFITRIONES.md).
 
 ## Objetivo
 
@@ -13,14 +20,14 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 1. Identidad Marco Oficia | Completada | Logo SVG, ícono Android PNG/SVG y sistema de color | Símbolo 03 adaptado y marca incorporada en la app |
 | 2. Base visual y navegación | Completada | Componentes, íconos y cinco secciones | Navegación clara y consistente en español |
 | 3. Inicio y exploración | Completada | Portada, búsqueda, categorías, promoción y catálogo | Filtrar y abrir espacios desde inicio o explorar |
-| 4. Ficha, solicitud y ticket | Completada; banco pendiente | Fotos, equipo, estancia, total y referencia para depósito | Ticket claro; no permite depósitos con datos de muestra o cuenta sin configurar |
+| 4. Ficha, solicitud y ticket | Completada | Fotos, equipo, estancia, importe estimado y folio | Ticket informativo; no ofrece pagos ni confirma disponibilidad |
 | 5. Favoritos, reservas y perfil | Completada | Secciones funcionales del prototipo | Guardar favoritos y consultar solicitudes durante la sesión |
 | 6. Filtros y datos locales | Completada | Filtro por capacidad/servicios y almacenamiento en el dispositivo | Favoritos y solicitudes se recuperan al abrir la app |
-| 7. Panel de anfitrión | Completada, solo consulta | Consulta solicitudes relacionadas con sus espacios | El anfitrión no valida depósitos ni autoriza rentas |
+| 7. Panel de anfitrión | Completada, solo consulta | Consulta solicitudes relacionadas con sus espacios | El anfitrión ve solicitudes y desglose estimado por ticket |
 | 8. Migración y verificación tecnológica | Completada | Vite + React + Capacitor 8; mantener Supabase y el PWA como una base compartida | Migración, build PWA, sincronización Android y AAB firmado 1.2.3/código 6 verificados; publicado en prueba interna |
 | 9. Diseño de conexión real | Completada | `ARQUITECTURA_BACKEND.md` | Flujo cliente–anfitrión, datos y permisos definidos |
 | 10. Mapa en Explorar | Completada con datos de muestra | Mapa OpenStreetMap, arrastre, zoom, precios y acceso a las fichas | Marcadores aproximados identificados como muestra; coordenadas reales siguen pendientes |
-| 11. Ticket y depósitos por transferencia | Implementada; datos bancarios pendientes | Referencia única, CLABE validada, reporte de folio y validación exclusiva de Operaciones | El servidor impide confirmar antes de verificar el depósito; espacios de muestra nunca solicitan dinero |
+| 11. Tickets informativos | Vigente; pagos suspendidos | Folio único, desglose estimado y bloqueo de rutas bancarias | El servidor permite crear/leer tickets e impide actualizar estados de pago |
 
 ## Mejora de experiencia · Mockups Oficia
 
@@ -29,9 +36,9 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Catálogo de muestra claro | Completada | Las tarjetas y fichas identifican espacios de muestra y no muestran calificaciones ficticias. |
 | Fotos de la ficha | Completada | Las miniaturas cambian la imagen principal y conservan nombres accesibles. |
 | Orden de resultados | Completada | Explorar puede ordenar por recomendación, menor precio o mayor capacidad; mantiene búsqueda, categoría, capacidad y servicios. |
-| Solicitud transparente | Completada | El ticket distingue solicitud, transferencia reportada y autorización; los importes de muestra no aceptan depósitos. |
+| Solicitud transparente | Completada | El ticket distingue solicitud e importe ilustrativo; no ofrece datos bancarios ni recibe dinero. |
 | Mapa, ubicación y acceso | Mapa de muestra y selector de ubicación implementados | Explorar muestra coordenadas aproximadas para muestras; el alta de anfitrión permite elegir el punto exacto con mapa OSM arrastrable y zoom, y guarda latitud/longitud antes de revisión. Solo se hace pública la ubicación de una ficha aprobada. |
-| Ticket y depósito | Flujo de aplicación completo; CLABE pendiente | Ticket con referencia única, folio bancario, compartir resumen y bandeja de Operaciones; la cuenta aún no se captura. |
+| Ticket compartible | Completada | Folio propio, estancia, importe estimado, compartir resumen y bandeja de consulta en Operaciones. |
 | Calendario de disponibilidad | Horarios, cierres y rentas autorizadas | Se deshabilitan fechas y horas cerradas o ya reservadas; la base comparte únicamente inicio y fin de rentas autorizadas. El dueño bloquea hasta 30 días desde su panel; el servidor vuelve a validar antes de autorizar. |
 
 ## Fase 2 · Antes del lanzamiento
@@ -40,7 +47,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | --- | --- | --- |
 | Una app, dos perfiles fijos | Publicado en `4f1d74a`; Vercel `success` | Elección antes del alta, cuentas existentes preservadas; probar correo/Google con nuevas cuentas |
 | Panel de dueño y borradores | Ficha ampliada y revisión interna | Probar carga de foto en cuenta real, calendario de cierres y publicación comercial con inventario verificado |
-| Ingresos del dueño | Bruto verificado por espacio implementado | Comisiones, impuestos y liquidaciones aún por definir |
+| Tickets y desglose para anfitrión | Desglose informativo implementado | Base, tarifa Oficia hipotética 15% e IVA estimado sobre esa tarifa visibles por solicitud activa. Sin cobro, CFDI ni liquidación; falta dictamen fiscal y contrato |
 | Inventario real, fotografías y precios | Pendiente | Espacios y condiciones facilitados por el negocio |
 | Cuentas, roles y sincronización cliente ↔ anfitrión | Flujo de perfil duplicado corregido; prueba real pendiente | La selección consulta primero el perfil fijo y conserva el rol existente ante una colisión concurrente. “Mis reservas” filtra por titular y Favoritos se guarda por cuenta; falta validar en dos cuentas reales y teléfono Android |
 | Cuenta activa y perfil personalizable | Implementado | La pantalla de acceso identifica la sesión activa y ofrece continuar. Nombre/foto se toman de Google Auth; cliente y anfitrión pueden editar nombre y enlace HTTPS de foto desde Perfil. Falta validar persistencia en web/Android con sesión real |
@@ -48,8 +55,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Acceso con Google en web y Android | Web verificada; prueba nativa pendiente | El puente Android compila y el AAB 1.2.3 está en prueba interna. Instalarlo en un teléfono, probar OAuth nativo y registrar en Google Auth la huella de Play App Signing si difiere de la de carga |
 | Proyecto Vercel y frontend web | Despliegue automático verificado | El commit `457eb40` en `main` reportó check Vercel `success`. El conector Vercel devuelve 403 al intentar inspeccionar la página; falta comprobación visual posterior en el navegador. |
 | Disponibilidad, horarios y confirmación real | En curso | Horario habitual, días de cierre, ocupación por rentas autorizadas y traslapes se validan en servidor; el selector consulta solo los intervalos. Falta ampliar la agenda del dueño a 180 días y probar con inventario real. |
-| Depósitos manuales por transferencia | Implementado, sin cuenta configurada | Faltan banco, CLABE, titular e instrucciones; sin ello la app bloquea el reporte del depósito |
-| Pagos automáticos, cancelaciones y facturación | Pendiente | No se cobrarán tarjetas ni emitirá recibos fiscales hasta definir proveedor y políticas |
+| Cobros y conciliación | Suspendidos por decisión del usuario | La app no muestra CLABE ni acepta reportes o validaciones de pago; reevaluar solo con aprobación fiscal, contractual y operativa |
+| Pagos automáticos, cancelaciones y facturación | Pendiente | No se cobrarán tarjetas ni emitirán CFDI/constancias de retención hasta definir proveedor, flujo de fondos, obligaciones de intermediación y políticas |
 | Mapa y ubicaciones reales | Selector OSM arrastrable implementado; inventario real pendiente | El envío requiere latitud y longitud. El mapa público solo obtiene coordenadas reales al publicar una ficha aprobada; faltan domicilios verificados del inventario |
 | Publicación Android | `1.2.3` / código 6 disponible en prueba interna | Instalar y probar el build en un teléfono. Antes de producción faltan las verificaciones de Play Console y el proceso de prueba cerrada vigente; producción permanece intacta |
 | Recursos de ficha Google Play | Cargados y guardados; ficha lista para enviar a revisión, con orden visual pendiente | Ícono 512 × 512, portada 1024 × 500, textos y siete capturas por categoría: teléfono y tablet de 7 pulgadas (1080 × 1920), tablet 10 pulgadas (1440 × 2560). La categoría es Negocios; el contacto publicado es admin.yavoi@gmail.com y el sitio es https://oficia-delicias.vercel.app/. El usuario confirmó diseño manual; se declaró «No etiquetar recursos». No se envió la ficha a revisión ni se publicó la app. Las imágenes de tablet conservan el contenido del teléfono con márgenes y redimensionamiento; no son capturas nativas de tablet. El teléfono de contacto sigue sin proporcionarse y la cuadrícula de Console no quedó en la secuencia numerada. |
@@ -60,12 +67,13 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 - Paleta: coral `#D35E69`, coral profundo `#B54753`, ciruela `#512D37`, rosa suave `#FFE7E9`, marfil `#FFF9F8`.
 - Frase de marca: **Tu espacio, a tu hora.**
 - El catálogo actual es demostrativo. Ninguna solicitud de muestra implica disponibilidad confirmada ni pago.
-- El ticket muestra una referencia única para depósito. Operaciones verifica la cuenta y autoriza la renta; los anfitriones no pueden cambiar ese estado.
-- Banco, CLABE y titular siguen vacíos. El panel valida la CLABE antes de guardarla y el ticket no permite reportar depósitos mientras falten esos datos.
+- El ticket muestra un folio informativo. No solicita transferencias ni demuestra un pago o renta autorizada.
+- Las rutas de datos bancarios y actualización de estados de pago están revocadas en Supabase; los datos históricos permanecen.
 - El mapa OSM presenta ubicaciones aproximadas solo para los cuatro registros de muestra; no son domicilios reales ni sirven para llegar al espacio.
 - El usuario confirmó que **todavía no hay inventario real**. Se mantienen espacios de muestra.
 - El usuario eligió que **las solicitudes reales lleguen a un panel dentro de Oficia**. Ya existe un panel de Operaciones protegido en base de datos, además del panel de consulta del anfitrión. Falta validar el ciclo con una segunda cuenta cliente.
 - La cuenta anfitriona se creó con Google y se asignó a los cuatro espacios demostrativos; el acceso al panel se basa en la relación `spaces.host_id` bajo RLS.
+- El resumen por ticket separa renta base, tarifa hipotética de Oficia (15%) e IVA estimado sobre esa tarifa (16%). No representa ingreso, CFDI ni liquidación. No calcula impuesto de renta ni retenciones personales porque dependen de la estructura contractual, cobro y situación fiscal del anfitrión.
 - Google Auth usa el proveedor de **Supabase Auth** en web y Android. Android usa el selector nativo de Google y entrega el token de identidad a Supabase; la web inicia OAuth con el mismo proveedor. Ambos caminos comparten usuario y RLS.
 - Google Auth Platform está configurada para Oficia como aplicación externa y usa Supabase Auth para web y Android. Los orígenes permitidos y las cuentas de prueba se administran en Google Cloud; el acceso web quedó verificado. Las credenciales privadas no se guardan en el repositorio ni en este plan.
 - El código local de Oficia ya migró de Expo/EAS a Vite 8.2.2 + React 19 + Capacitor 8.4.3, la misma familia tecnológica comprobada en Yavoi!. Gradle genera paquetes Android y el PWA usa los mismos componentes y proyecto Supabase; Android empaqueta el frontend en `dist` y no depende de Vercel para abrir.
@@ -160,7 +168,9 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | 15 oct 2026 | Capturas de teléfono y tabletas en Play Console | Se prepararon siete pantallas numeradas en el flujo acceso → inicio → explorar → mapa → favoritos → reservas → perfil. Teléfono: 1080 × 1920; tabletas de 8 pulgadas: categoría de 7 pulgadas disponible en Console, 1080 × 1920; tabletas de 10 pulgadas: 1440 × 2560. Las tres categorías muestran 7 de 8 capturas; todas usan PNG, orientación 9:16 y cumplen los rangos de resolución y peso de Play. Ícono, portada y textos siguen presentes. Console confirmó «Se guardaron los cambios» y la ficha permanece como borrador, sin enviarse a revisión. Pendiente elegir con el titular la declaración de recursos de IA para el ícono/portada; la edición visual de esta etapa solo redimensionó las capturas originales. |
 | 15 oct 2026 | Capturas de teléfono y tabletas en Play Console | Se prepararon siete pantallas numeradas en el flujo acceso → inicio → explorar → mapa → favoritos → reservas → perfil. Teléfono: 1080 × 1920; tabletas de 8 pulgadas: categoría de 7 pulgadas disponible en Console, 1080 × 1920; tabletas de 10 pulgadas: 1440 × 2560. Las tres categorías muestran 7 de 8 capturas; todas usan PNG, orientación 9:16 y cumplen los rangos de resolución y peso de Play. Ícono, portada y textos siguen presentes. Los cambios se guardaron; las imágenes de tablet son redimensionamientos de las capturas originales, no ejecuciones capturadas en una tablet real. |
 | 15 oct 2026 | Cierre de ficha y perfil de Play Console | El usuario confirmó que el ícono y la portada son de diseño manual; en la revisión de IA se seleccionó «No etiquetar recursos» y se guardó. La ficha predeterminada es-419 muestra siete capturas en teléfono, tablet de 7 pulgadas (la categoría más cercana a 8 pulgadas) y tablet de 10 pulgadas. Configuración de tienda: categoría Negocios; correo público admin.yavoi@gmail.com y sitio https://oficia-delicias.vercel.app/ publicados. No se proporcionó número telefónico. Console confirmó «Se guardó el cambio» y la ficha quedó «Lista para enviar a revisión»; no se envió a revisión ni se publicó la app. |
+| 15 oct 2026 | Desglose de ingresos y revisión fiscal inicial | El panel del anfitrión muestra por depósito verificado la renta base, comisión Oficia 15%, IVA estimado de la comisión 16% y saldo estimado antes de impuestos/retenciones del anfitrión. Pruebas de centavos agregadas. Se revisaron LIVA/LISR, RMF 2026 y Ley de Hacienda de Chihuahua; el criterio y las fuentes están en `CRITERIO_FISCAL_Y_DESGLOSE.md`. No se generan CFDI/constancias ni se calcula impuesto de renta, retención o liquidación real. Antes de cobrar falta dictamen fiscal y validar el rol contractual/flujo de cobro e información del anfitrión. |
 | 15 oct 2026 | Cierre de ficha y perfil de Play Console | El usuario confirmó que el ícono y la portada son de diseño manual; en la revisión de IA se seleccionó «No etiquetar recursos» y se guardó. La ficha predeterminada es-419 muestra siete capturas en teléfono, tablet de 7 pulgadas (la categoría más cercana a 8 pulgadas) y tablet de 10 pulgadas. Configuración de tienda: categoría Negocios; correo público admin.yavoi@gmail.com y sitio https://oficia-delicias.vercel.app/ publicados. No se proporcionó número telefónico. Console confirmó «Se guardó el cambio» y la ficha quedó «Lista para enviar a revisión»; no se envió a revisión ni se publicó la app. La cuadrícula conserva las capturas cargadas pero no su orden secuencial; revisar/reordenar antes del envío. |
+| 15 oct 2026 | Oficia queda en modo tickets, sin pagos | Se retiraron de PWA/Android la CLABE, el reporte y validación de transferencias y las etiquetas de ingresos cobrados. El dueño ve desglose estimado por solicitud activa. Supabase aplicó `ticket_only_no_payment_access`: crear/leer tickets sigue permitido; actualizar pagos y leer datos bancarios quedó denegado. Pasaron 14 pruebas, compilación web y sincronización Android. Pendiente comprobar la experiencia en dos cuentas y teléfono; no se cargó un nuevo AAB. |
 
 ## Correspondencia con los mockups
 
@@ -171,11 +181,11 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | Detalle con fotos, servicios, opiniones y botón de reserva | Galería interactiva; catálogo de muestra identificado y reseñas ficticias ocultas |
 | Selección de fecha y hora | Días cerrados y horarios ocupados por rentas autorizadas deshabilitados; Operaciones valida de nuevo al autorizar |
 | Favoritos y comprobante | Implementados; favoritos separados por cuenta y comprobante sin autorización de acceso |
-| Panel de dueño y Operaciones | Dueño crea borradores, consulta solicitudes e ingresos brutos de sus espacios; Operaciones revisa borradores, valida depósitos y autoriza |
+| Panel de dueño y Operaciones | Dueño crea borradores y consulta tickets con desglose estimado; Operaciones revisa solicitudes y fichas sin manejar dinero |
 | Mapa | Explorar muestra cuatro puntos aproximados; el alta de anfitrión cuenta con minimapa OSM arrastrable que actualiza latitud y longitud para la ficha real |
 | Chat con anfitrión | Pendiente de cuentas, anfitriones y mensajería real |
 | QR o boleto de acceso | Pendiente de confirmación real de la reserva |
-| Ticket y depósito | Implementados; banco, CLABE y titular pendientes de configuración |
+| Ticket informativo | Implementado con folio, estancia e importe estimado; sin CLABE, depósito ni conciliación |
 | Cobro automático y recibo fiscal | Pendientes de proveedor y reglas comerciales |
 
 ## Próximo paso concreto
@@ -184,8 +194,8 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 2. Revisar en Play Console la huella de Play App Signing y agregarla a Google Auth si se requiere; completar la ficha y declaraciones de publicación antes de solicitar cualquier revisión.
 3. Mantener el track interno para validación; antes de producción completar el proceso de prueba cerrada y demás requisitos vigentes de Play Console. Producción no se ha modificado.
 4. Ampliar la agenda de cierres del dueño de 30 a 180 días y validarla cuando haya inventario real.
-5. Definir banco, titular y CLABE; comisiones, impuestos, liquidaciones, cancelaciones y devoluciones antes de aceptar depósitos reales.
-6. Cuando existan fotos e inventario autorizados, validar disponibilidad, mapa y depósitos en campo. Completar el portal administrativo profesional descrito abajo.
+5. Antes de considerar cualquier pago futuro, obtener revisión de contador/abogado del contrato de intermediación; precisar quién renta y cobra, IVA desglosado, posibles retenciones federales/estatales, documentación del anfitrión, CFDI, reportes SAT y la liquidación. La nota [CRITERIO_FISCAL_Y_DESGLOSE.md](CRITERIO_FISCAL_Y_DESGLOSE.md) registra el análisis y las decisiones por resolver.
+6. Cuando existan fotos e inventario autorizados, validar disponibilidad, mapa y tickets en campo. Completar el portal administrativo profesional descrito abajo.
 
 ## Fase final · Portal profesional de administración de Oficia
 
@@ -204,6 +214,7 @@ Al cerrar las tareas de lanzamiento de la app, construir un portal web interno, 
 | Mensajes y avisos | Plantillas en español para recepción, confirmación, cambio y cancelación; avisos dentro de la app y correo cuando el proveedor esté configurado; registro del envío y su resultado; no anunciar confirmaciones antes de que la operación las autorice. |
 | Reportes | Solicitudes, conversión, ocupación, cancelaciones, demanda por zona y desempeño de espacios; exportación CSV con filtros y fechas; separar importes estimados de cobros reales y contemplar una futura conciliación/facturación. |
 | Configuración operativa | Categorías, amenidades, zonas atendidas, horarios generales, políticas, anticipación, ventanas de cancelación, impuestos/comisiones y datos de contacto; mantener historial y señalar cambios que afecten reservas futuras. |
+| Finanzas y fiscalidad | Mostrar ahora solo renta, tarifa Oficia hipotética e IVA estimado de esa tarifa por ticket. Cobros, retenciones, liquidación, CFDI y conciliación quedan fuera del alcance actual; cualquier etapa futura requerirá definición fiscal y autorización. |
 | Auditoría y soporte | Registro de quién cambió espacios, precios, disponibilidad, estados y permisos, con fecha y valores relevantes; búsqueda de incidencias, notas internas y acceso rápido a la reserva relacionada. |
 
 ### Entregas finales y criterios de aceptación

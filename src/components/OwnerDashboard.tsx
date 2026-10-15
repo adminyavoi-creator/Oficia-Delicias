@@ -3,16 +3,16 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { supabase } from '../backend';
 import { formatDate, formatMoney, nextDates } from '../data';
 import { palette } from '../theme';
-import { ownerRevenue } from '../ownerMetrics';
+import { ownerTicketEstimates } from '../ownerMetrics';
 import { Brand } from './Brand';
 import { CoordinatePickerMap } from './CoordinatePickerMap';
 import { Icon, IconName } from './Icon';
 import { ProfileEditor } from './ProfileEditor';
 
-type OwnerTab = 'Inicio' | 'Espacios' | 'Solicitudes' | 'Ingresos' | 'Perfil';
+type OwnerTab = 'Inicio' | 'Espacios' | 'Solicitudes' | 'Tickets' | 'Perfil';
 type OwnedSpace = { id: string; name: string; area: string; is_demo: boolean; is_published: boolean; rate_hour_cents: number };
 type Closure = { space_id: string; closed_on: string };
-type OwnerBooking = { id: string; space_id: string; local_date: string; local_time: string; quantity: number; unit: string; total_cents: number; status: string; payment_status: string; created_at: string };
+type OwnerBooking = { id: string; space_id: string; local_date: string; local_time: string; quantity: number; unit: string; total_cents: number; operations_fee_cents: number; operations_fee_vat_estimate_cents: number; owner_balance_estimate_cents: number; status: string; payment_status: string; created_at: string };
 type Draft = { id: string; name: string; area: string; city: string; address: string; latitude: number | null; longitude: number | null; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: number; description: string; privacy: string; amenities: string[]; image_url: string; rate_hour_cents: number; rate_day_cents: number; rate_week_cents: number; status: string; rejection_reason: string | null };
 type DraftForm = { id?: string; name: string; area: string; city: string; address: string; latitude: string; longitude: string; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: string; description: string; privacy: string; amenities: string[]; image_url: string; hour: string; day: string; week: string };
 
@@ -20,7 +20,7 @@ const amenityOptions = ['Internet rápido', 'Pantalla', 'Proyector', 'Pizarrón'
 const blankDraft: DraftForm = { name: '', area: '', city: 'Delicias', address: '', latitude: '', longitude: '', open_days: [1, 2, 3, 4, 5], opens_at: '08:00', closes_at: '18:00', photo_path: null, category: 'Oficina privada', capacity: '1', description: '', privacy: '', amenities: [], image_url: '', hour: '', day: '', week: '' };
 const weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const tabs: { label: OwnerTab; icon: IconName }[] = [
-  { label: 'Inicio', icon: 'home' }, { label: 'Espacios', icon: 'briefcase' }, { label: 'Solicitudes', icon: 'calendar' }, { label: 'Ingresos', icon: 'ticket' }, { label: 'Perfil', icon: 'user' },
+  { label: 'Inicio', icon: 'home' }, { label: 'Espacios', icon: 'briefcase' }, { label: 'Solicitudes', icon: 'calendar' }, { label: 'Tickets', icon: 'ticket' }, { label: 'Perfil', icon: 'user' },
 ];
 const toMoney = (value: string) => Math.round(Number(value) * 100);
 const toCoordinate = (value: string) => value.trim() && Number.isFinite(Number(value)) ? Number(value) : null;
@@ -45,7 +45,7 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
     const [owned, draftsResult, requests] = await Promise.all([
       supabase.from('spaces').select('id,name,area,is_demo,is_published,rate_hour_cents').eq('host_id', userId),
       supabase.from('space_drafts').select('*').eq('owner_id', userId).order('created_at', { ascending: false }),
-      supabase.from('bookings').select('id,space_id,local_date,local_time,quantity,unit,total_cents,status,payment_status,created_at').order('created_at', { ascending: false }),
+      supabase.from('bookings').select('id,space_id,local_date,local_time,quantity,unit,total_cents,operations_fee_cents,operations_fee_vat_estimate_cents,owner_balance_estimate_cents,status,payment_status,created_at').order('created_at', { ascending: false }),
     ]);
     if (owned.error || draftsResult.error || requests.error) throw owned.error ?? draftsResult.error ?? requests.error;
     const ownedSpaces = (owned.data ?? []) as OwnedSpace[];
@@ -66,8 +66,8 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
     return () => { active = false; };
   }, [refresh]);
 
-  const revenue = useMemo(() => ownerRevenue(bookings, spaces), [bookings, spaces]);
-  const gross = revenue.grossCents / 100;
+  const estimates = useMemo(() => ownerTicketEstimates(bookings, spaces), [bookings, spaces]);
+  const gross = estimates.grossCents / 100;
   const waiting = bookings.filter(booking => booking.status === 'pendiente').length;
   const editableDrafts = drafts.filter(draft => draft.status !== 'aprobado');
   const spaceName = (id: string) => spaces.find(space => space.id === id)?.name ?? 'Espacio';
@@ -166,7 +166,7 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
       {loadError && tab !== 'Perfil' ? <View><Empty text="No pudimos cargar tus espacios." /><Pressable accessibilityRole="button" onPress={() => { void refresh().catch(() => setLoadError(true)); }} style={styles.secondary}><Text style={styles.secondaryText}>Reintentar</Text></Pressable></View> : null}
       {tab === 'Inicio' && !loadError && <>
         <Text style={styles.eyebrow}>TU ACTIVIDAD</Text><Text style={styles.title}>Hola, {profileName.split(' ')[0]}.</Text><Text style={styles.small}>Tu espacio también trabaja para ti.</Text>
-        <View style={styles.stats}><Stat label="Solicitudes" value={String(waiting)} /><Stat label="Espacios" value={String(spaces.filter(space => !space.is_demo).length + editableDrafts.length)} /><Stat label="Ingresos confirmados" value={formatMoney(gross)} wide /></View>
+        <View style={styles.stats}><Stat label="Solicitudes" value={String(waiting)} /><Stat label="Espacios" value={String(spaces.filter(space => !space.is_demo).length + editableDrafts.length)} /><Stat label="Tickets estimados" value={formatMoney(gross)} wide /></View>
         <Text style={styles.section}>Mis espacios</Text>
         {spaces.filter(space => !space.is_demo).length || editableDrafts.length ? <>{spaces.filter(space => !space.is_demo).map(space => <SpaceLine key={space.id} name={space.name} detail={space.area} badge={space.is_published ? 'Publicado' : 'Pausado'} />)}{editableDrafts.slice(0, 3).map(draft => <SpaceLine key={draft.id} name={draft.name || 'Espacio sin nombre'} detail={draft.area || 'Completa la zona'} badge={draft.status === 'en_revision' ? 'En revisión' : draft.status === 'rechazado' ? 'Con observaciones' : 'Borrador'} />)}</> : <Empty text="Agrega tu primer espacio para comenzar." />}
         <Pressable accessibilityRole="button" onPress={() => { setTab('Espacios'); setPhotoPreview(null); setEditing({ ...blankDraft }); }} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Agregar espacio</Text></Pressable>
@@ -207,12 +207,12 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
         </>}
       </>}
       {tab === 'Solicitudes' && !loadError && <><Text style={styles.eyebrow}>AGENDA</Text><Text style={styles.title}>Solicitudes e historial</Text>
-        {bookings.length ? bookings.map(booking => <View key={booking.id} style={styles.booking}><View style={styles.line}><Text style={styles.cardTitle}>{spaceName(booking.space_id)}</Text><Text style={styles.badge}>{booking.status === 'confirmada' ? 'Autorizada' : booking.status === 'rechazada' ? 'Rechazada' : 'Pendiente'}</Text></View><Text style={styles.small}>{formatDate(booking.local_date)} · {booking.local_time.slice(0, 5)} · {booking.quantity} {booking.unit.toLowerCase()}</Text><Text style={styles.amount}>{formatMoney(booking.total_cents / 100)}</Text><Text style={styles.small}>Depósito: {booking.payment_status === 'verificado' ? 'validado' : booking.payment_status === 'reportado' ? 'en revisión' : 'pendiente'}</Text></View>) : <Empty text="Las solicitudes para tus espacios aparecerán aquí." />}
-        <Text style={styles.small}>Operaciones valida los depósitos y autoriza las rentas.</Text>
+        {bookings.length ? bookings.map(booking => <View key={booking.id} style={styles.booking}><View style={styles.line}><Text style={styles.cardTitle}>{spaceName(booking.space_id)}</Text><Text style={styles.badge}>{booking.status === 'confirmada' ? 'Autorizada' : booking.status === 'rechazada' ? 'Rechazada' : 'Pendiente'}</Text></View><Text style={styles.small}>{formatDate(booking.local_date)} · {booking.local_time.slice(0, 5)} · {booking.quantity} {booking.unit.toLowerCase()}</Text><Text style={styles.amount}>{formatMoney(booking.total_cents / 100)}</Text><Text style={styles.small}>Ticket informativo · sin cobro</Text></View>) : <Empty text="Las solicitudes para tus espacios aparecerán aquí." />}
+        <Text style={styles.small}>Cada solicitud genera un ticket estimado. No se procesa dinero en Oficia.</Text>
       </>}
-      {tab === 'Ingresos' && !loadError && <><Text style={styles.eyebrow}>RESULTADOS</Text><Text style={styles.title}>Ingresos por espacio</Text><View style={styles.incomeHero}><Text style={styles.incomeLabel}>Depósitos validados · importe bruto</Text><Text style={styles.incomeValue}>{formatMoney(gross)}</Text><Text style={styles.incomeHint}>No incluye espacios de muestra ni solicitudes pendientes.</Text></View>
-        {spaces.filter(space => !space.is_demo).length ? spaces.filter(space => !space.is_demo).map(space => { const count = revenue.confirmed.filter(booking => booking.space_id === space.id).length; return <View key={space.id} style={styles.booking}><View style={styles.line}><Text style={styles.cardTitle}>{space.name}</Text><Text style={styles.amount}>{formatMoney((revenue.bySpaceCents.get(space.id) ?? 0) / 100)}</Text></View><Text style={styles.small}>{count} {count === 1 ? 'renta autorizada' : 'rentas autorizadas'}</Text></View>; }) : <Empty text="Los ingresos de espacios reales aparecerán aquí cuando Operaciones valide un depósito." />}
-        <Text style={styles.small}>Los importes son brutos. Comisiones, impuestos y liquidaciones aún no están configurados.</Text>
+      {tab === 'Tickets' && !loadError && <><Text style={styles.eyebrow}>DESGLOSE</Text><Text style={styles.title}>Tickets por espacio</Text><View style={styles.incomeHero}><Text style={styles.incomeLabel}>Importe de solicitudes activas</Text><Text style={styles.incomeValue}>{formatMoney(gross)}</Text><Text style={styles.incomeHint}>Referencia informativa; no representa ingresos cobrados.</Text></View>
+        {spaces.filter(space => !space.is_demo).length ? spaces.filter(space => !space.is_demo).map(space => { const spaceBookings = estimates.active.filter(booking => booking.space_id === space.id); const count = spaceBookings.length; return <View key={space.id}><View style={styles.booking}><View style={styles.line}><Text style={styles.cardTitle}>{space.name}</Text><Text style={styles.amount}>{formatMoney((estimates.bySpaceCents.get(space.id) ?? 0) / 100)}</Text></View><Text style={styles.small}>{count} {count === 1 ? 'ticket estimado' : 'tickets estimados'}</Text></View>{spaceBookings.map(booking => <View key={booking.id} style={styles.statement}><View style={styles.line}><Text style={styles.cardTitle}>Desglose · {formatDate(booking.local_date)}</Text><Text style={styles.badge}>{booking.id}</Text></View><StatementLine label="Renta base" value={formatMoney(booking.total_cents / 100)} /><StatementLine label="Tarifa Oficia estimada · 15%" value={`− ${formatMoney(booking.operations_fee_cents / 100)}`} /><StatementLine label="IVA estimado sobre la comisión · 16%" value={`− ${formatMoney(booking.operations_fee_vat_estimate_cents / 100)}`} /><View style={styles.statementTotal}><Text style={styles.cardTitle}>Referencia del dueño antes de sus impuestos</Text><Text style={styles.amount}>{formatMoney(booking.owner_balance_estimate_cents / 100)}</Text></View></View>)}</View>; }) : <Empty text="Los tickets de espacios reales aparecerán aquí cuando lleguen solicitudes." />}
+        <View style={styles.fiscalNotice}><Text style={styles.cardTitle}>Cotización informativa · sin pago</Text><Text style={styles.small}>La comisión de Oficia se calcula al 15% sobre la renta base, sin sumar impuestos de la renta. El IVA sobre la comisión es una referencia estimada. Los impuestos de la renta y retenciones del anfitrión no están calculados. Oficia no cobra, retiene ni concilia dinero; estos importes no acreditan un pago.</Text></View>
       </>}
       {tab === 'Perfil' && <><Text style={styles.eyebrow}>CUENTA</Text><Text style={styles.title}>Perfil de anfitrión</Text><ProfileEditor name={profileName} avatarUrl={avatarUrl} email={email} accountLabel="Rento espacio · perfil fijo" onSave={onSaveProfile} />
         {isOperations ? <Pressable accessibilityRole="button" onPress={onOpenOperations} style={styles.secondary}><Text style={styles.secondaryText}>Abrir Operaciones</Text></Pressable> : null}
@@ -229,6 +229,7 @@ function Field({ label, value, onChange, placeholder, multiline = false, numeric
 function Stat({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) { return <View style={[styles.stat, wide && styles.statWide]}><Text style={styles.statValue}>{value}</Text><Text style={styles.statLabel}>{label}</Text></View>; }
 function SpaceLine({ name, detail, badge }: { name: string; detail: string; badge: string }) { return <View style={styles.spaceLine}><View style={styles.spaceIcon}><Icon name="briefcase" color={palette.action} size={20} /></View><View style={{ flex: 1 }}><Text style={styles.cardTitle}>{name}</Text><Text style={styles.small}>{detail}</Text></View><Text style={styles.badge}>{badge}</Text></View>; }
 function Empty({ text }: { text: string }) { return <View style={styles.empty}><Icon name="spark" color={palette.action} size={29} /><Text style={styles.emptyText}>{text}</Text></View>; }
+function StatementLine({ label, value }: { label: string; value: string }) { return <View style={styles.statementLine}><Text style={styles.statementLabel}>{label}</Text><Text style={styles.statementValue}>{value}</Text></View>; }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.cream }, scroll: { flex: 1 }, content: { padding: 21, paddingBottom: 42, maxWidth: 760, width: '100%', alignSelf: 'center' },
@@ -244,6 +245,7 @@ const styles = StyleSheet.create({
   booking: { backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line, borderRadius: 17, padding: 17, marginBottom: 11 }, line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }, amount: { color: palette.action, fontSize: 14, fontWeight: '800', marginTop: 9 },
   empty: { backgroundColor: palette.white, borderRadius: 18, padding: 28, alignItems: 'center', gap: 10, borderWidth: 1, borderColor: palette.line }, emptyText: { color: palette.muted, fontSize: 13, textAlign: 'center', lineHeight: 19 },
   incomeHero: { backgroundColor: palette.plum, borderRadius: 21, padding: 23, marginBottom: 21 }, incomeLabel: { color: palette.blush, fontSize: 12, fontWeight: '700' }, incomeValue: { color: palette.white, fontSize: 33, fontWeight: '900', marginTop: 9 }, incomeHint: { color: palette.blush, fontSize: 11, marginTop: 8 },
+  statement: { backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line, borderRadius: 17, padding: 16, marginBottom: 11, marginLeft: 12 }, statementLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, paddingTop: 10 }, statementLabel: { flex: 1, color: palette.muted, fontSize: 11 }, statementValue: { color: palette.plum, fontSize: 11, fontWeight: '700' }, statementTotal: { borderTopWidth: 1, borderColor: palette.line, marginTop: 12, paddingTop: 12, gap: 4 }, fiscalNotice: { backgroundColor: palette.blush, borderRadius: 15, padding: 15, marginTop: 7 },
   formHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, field: { marginTop: 13 }, label: { color: palette.plum, fontSize: 12, fontWeight: '800', marginBottom: 6 }, input: { borderWidth: 1, borderColor: palette.line, borderRadius: 13, paddingHorizontal: 13, paddingVertical: 12, backgroundColor: palette.white, color: palette.plum, fontSize: 14, minHeight: 45 }, multiline: { minHeight: 88, textAlignVertical: 'top' }, chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, chip: { paddingHorizontal: 10, paddingVertical: 9, borderRadius: 10, backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line }, chipActive: { backgroundColor: palette.action, borderColor: palette.action }, chipText: { color: palette.plum, fontSize: 11, fontWeight: '700' }, chipTextActive: { color: palette.white }, rateRow: { flexDirection: 'row', gap: 9 }, rateField: { flex: 1 },
   photo: { width: '100%', height: 190, borderRadius: 14, backgroundColor: palette.blush, marginVertical: 12 },
   dateStrip: { gap: 8, paddingBottom: 16 }, datePill: { minWidth: 76, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.white, alignItems: 'center' }, datePillClosed: { backgroundColor: palette.action, borderColor: palette.action }, datePillText: { color: palette.plum, fontSize: 12, fontWeight: '800' }, datePillSub: { color: palette.muted, fontSize: 10, marginTop: 2 }, datePillTextClosed: { color: palette.white },
