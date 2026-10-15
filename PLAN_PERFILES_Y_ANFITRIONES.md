@@ -48,6 +48,6 @@ Si alguien necesita ambas actividades, deberá usar dos cuentas distintas. Un ca
 | Publicación de espacios reales | Pendiente | Datos y fotos autorizados; validación de ubicación, disponibilidad y condiciones |
 | Historial financiero | Bruto por espacio implementado | Libro de movimientos, comisiones, impuestos, devoluciones y liquidaciones |
 | Mensajes y avisos | Pendiente | Chat seguro, correos/avisos operativos y trazabilidad |
-| Distribución Android | AAB 1.1.0 firmado y verificado localmente | Prueba en teléfono y actualización de Google Play interno; producción pendiente de requisitos de Play |
+| Distribución Android | AAB 1.1.0 firmado, verificado y disponible en Play interno para un verificador | Prueba en teléfono; producción pendiente de requisitos de Play |
 
 **Criterio de salida para el flujo de dueño:** un anfitrión nuevo puede iniciar con correo o Google, crear un borrador, enviarlo a Operaciones, recibir decisión y consultar sus propias solicitudes e ingresos reales; un cliente no puede ver ni modificar esos datos. La publicación comercial exige inventario verificado y pruebas de disponibilidad y pagos.
