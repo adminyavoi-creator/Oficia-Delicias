@@ -6,9 +6,13 @@
 
 1. Sin sesión aparece la elección visual con dos tarjetas y el acceso «Ya tengo cuenta».
 2. «Busco espacio» o «Rento espacio» lleva al acceso con correo o Google. La elección se conserva al volver de Google o de la confirmación por correo.
-3. En el primer acceso autenticado se registra el perfil una sola vez. Si esa cuenta ya tiene perfil, se respeta el existente incluso si se llegó desde la otra tarjeta.
+3. En el primer acceso autenticado se registra el perfil una sola vez. Antes de insertar, la app consulta el perfil. Si ya existe, se respeta y abre esa experiencia incluso si se llegó desde la otra tarjeta. Si dos eventos compiten, la app vuelve a leer el perfil que quedó guardado y continúa con ese rol; no muestra una instrucción de iniciar sesión de nuevo.
 4. El servidor impide actualizar o borrar el tipo de perfil por la API. Una cuenta `anfitrion` no puede crear solicitudes de reserva.
 5. Las cuentas existentes se incorporaron sin pedir una segunda alta: las que ya gestionan espacios son anfitrionas; las demás son clientes.
+
+Con una sesión activa, la pantalla identifica la cuenta y rol existentes, y muestra **Continuar**. Una cuenta autenticada que todavía no tiene perfil puede completar la elección inicial; no se ofrece cambiar un rol ya fijado.
+
+Nombre y foto se leen de los metadatos de Google que recibe Supabase Auth (`full_name`/`name` y `avatar_url`/`picture`). Si falta el nombre, se muestra el correo. Cliente y anfitrión pueden editar el nombre y guardar la foto mediante un enlace HTTPS desde Perfil. Por ahora no se carga una imagen desde el teléfono. Estos metadatos no dan permisos ni alteran el tipo de cuenta.
 
 Si alguien necesita ambas actividades, deberá usar dos cuentas distintas. Un cambio excepcional de titularidad requerirá revisión manual de Operaciones y una política formal; no habrá un botón para cambiar el tipo de perfil.
 
@@ -20,7 +24,7 @@ Si alguien necesita ambas actividades, deberá usar dos cuentas distintas. Un ca
 | Espacios | Explorar lista/mapa, filtros, fotos y servicios | Crear/editar borradores, enviar a revisión, estado de cada espacio |
 | Solicitudes | Elegir estancia, enviar, ver ticket y depósito | Agenda e historial de solicitudes de espacios propios; Operaciones valida pagos |
 | Ingresos | No aplica | Importe bruto de depósitos verificados y rentas autorizadas, por espacio; excluye muestras |
-| Perfil | Favoritos, reservas y cierre de sesión | Tipo de perfil fijo, cuenta y cierre de sesión; acceso a Operaciones si está autorizado |
+| Perfil | Datos de cuenta editables, favoritos, reservas y cierre de sesión | Datos de cuenta editables, tipo de perfil fijo y cierre de sesión; acceso a Operaciones si está autorizado |
 
 ### Botones principales
 
@@ -42,6 +46,8 @@ Si alguien necesita ambas actividades, deberá usar dos cuentas distintas. Un ca
 | Entrega | Estado al 15 oct 2026 | Para terminar |
 | --- | --- | --- |
 | Elección y acceso con correo/Google | El usuario confirmó que su alta con Google Auth funciona | Probar otra cuenta de cliente y Android instalado; verificar persistencia del perfil |
+| Recuperación de sesión/perfil | Consulta previa y recuperación de inserciones duplicadas implementadas; continuidad visible para sesión activa | Reabrir la app, iniciar sesión con cliente y anfitrión existentes, entrar desde ambos caminos y confirmar que el rol fijo siempre abre su inicio sin duplicar perfil |
+| Personalización de nombre y foto | Metadatos de Google y edición desde Perfil implementados para ambos roles | Verificar nombre y foto guardados en una sesión real y que sobrevivan al cierre/apertura; confirmar que URL inválida no se guarde |
 | Perfil fijo y permisos | Migración aplicada; RLS y bloqueos probados en transacción | Prueba funcional completa desde la interfaz |
 | Panel de dueño | Inicio, espacios, solicitudes, ingresos y perfil; ficha con dirección, horario habitual y foto | Calendario de cierres, reportes y notificaciones |
 | Borradores y revisión | Guardar, editar, enviar, validar o devolver; foto privada en Storage | Probar carga real y coordenadas, documentos y publicación controlada |

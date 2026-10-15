@@ -14,11 +14,13 @@ import { AuthVideoBackground } from './src/components/AuthVideoBackground';
 import { confirmInBrowser, showMessage } from './src/dialogs';
 import { OpenStreetMap } from './src/components/OpenStreetMap';
 import { myBookings as selectMyBookings } from './src/visibility';
-import { AccountType, isAccountType } from './src/profiles';
+import { AccountType, ensureAccountType, isAccountType } from './src/profiles';
 import { RoleChoice } from './src/components/RoleChoice';
 import { OwnerDashboard } from './src/components/OwnerDashboard';
 import { OperationsDraftReview, ReviewDraft } from './src/components/OperationsDraftReview';
 import { BusyInterval, slotAvailability } from './src/availability';
+import { ProfileEditor } from './src/components/ProfileEditor';
+import { profileAvatarUrl, profileDisplayName } from './src/profileMetadata';
 
 type Screen = 'welcome' | 'tabs' | 'detail' | 'booking' | 'receipt' | 'host' | 'operations' | 'auth' | 'chooseRole' | 'owner';
 type DetailSection = 'Acerca de' | 'Galería' | 'Opiniones';
@@ -124,41 +126,57 @@ function AppContent() {
   };
   const resolveProfile = async (signedUser: User) => {
     if (!supabase) return;
-    const { data, error } = await supabase.from('oficia_profiles').select('account_type').eq('user_id', signedUser.id).maybeSingle();
-    if (error) throw error;
-    let role: AccountType | null = isAccountType(data?.account_type) ? data.account_type : null;
-    if (!role) {
-      const savedChoice = await AsyncStorage.getItem('oficia:pending-account-type');
-      if (isAccountType(savedChoice)) {
-        const inserted = await supabase.from('oficia_profiles').insert({ user_id: signedUser.id, account_type: savedChoice }).select('account_type').single();
-        if (inserted.error) {
-          // Si dos eventos de Auth llegaron juntos, la primera inserción ya fijó el perfil.
-          const existing = await supabase.from('oficia_profiles').select('account_type').eq('user_id', signedUser.id).maybeSingle();
-          if (existing.error || !isAccountType(existing.data?.account_type)) throw inserted.error;
-          role = existing.data.account_type;
-        } else role = inserted.data.account_type as AccountType;
-      }
-    }
+    const client = supabase;
+    const savedChoice = await AsyncStorage.getItem('oficia:pending-account-type');
+    const role = await ensureAccountType(
+      async () => { const result = await client.from('oficia_profiles').select('account_type').eq('user_id', signedUser.id).maybeSingle(); if (result.error) throw result.error; return result.data?.account_type ?? null; },
+      async requested => { const result = await client.from('oficia_profiles').insert({ user_id: signedUser.id, account_type: requested }).select('account_type').single(); if (result.error) throw result.error; return result.data.account_type; },
+      isAccountType(savedChoice) ? savedChoice : null,
+    );
     if (!role) { setAccountType(null); setScreen('chooseRole'); return; }
     await AsyncStorage.removeItem('oficia:pending-account-type');
     setPendingAccountType(null);
     setAccountType(role);
     setScreen(role === 'anfitrion' ? 'owner' : 'tabs');
     setAuthBusy(false); setAuthPassword(''); setAuthNotice('');
-    await refreshRemoteData(signedUser.id);
+    // Cargar reservas/panel no debe revertir ni ocultar un perfil que ya quedó resuelto.
+    await refreshRemoteData(signedUser.id).catch(() => setDataNotice('Tu cuenta está lista; no se pudieron actualizar sus datos.'));
   };
   const chooseAccountType = async (role: AccountType) => {
     setPendingAccountType(role);
     if (user && supabase) {
-      const { data, error } = await supabase.from('oficia_profiles').insert({ user_id: user.id, account_type: role }).select('account_type').single();
-      if (error) { showMessage('No se pudo crear el perfil', 'Intenta de nuevo. Si esta cuenta ya tiene perfil, inicia sesión de nuevo.'); return; }
-      setAccountType(data.account_type as AccountType);
-      setScreen(role === 'anfitrion' ? 'owner' : 'tabs');
-      refreshRemoteData(user.id).catch(() => setDataNotice('No se pudieron cargar los datos de tu cuenta.'));
+      try {
+        const client = supabase;
+        const resolved = await ensureAccountType(
+          async () => { const result = await client.from('oficia_profiles').select('account_type').eq('user_id', user.id).maybeSingle(); if (result.error) throw result.error; return result.data?.account_type ?? null; },
+          async requested => { const result = await client.from('oficia_profiles').insert({ user_id: user.id, account_type: requested }).select('account_type').single(); if (result.error) throw result.error; return result.data.account_type; },
+          role,
+        );
+        if (!resolved) throw new Error('No se encontró ni creó el perfil de la cuenta.');
+        setAccountType(resolved);
+        setScreen(resolved === 'anfitrion' ? 'owner' : 'tabs');
+        setPendingAccountType(null);
+        await AsyncStorage.removeItem('oficia:pending-account-type');
+        await refreshRemoteData(user.id).catch(() => setDataNotice('Tu cuenta está lista; no se pudieron actualizar sus datos.'));
+      } catch {
+        showMessage('No pudimos revisar tu cuenta', 'Revisa tu conexión e inténtalo de nuevo. Tu perfil y tipo de cuenta se conservarán.');
+      }
       return;
     }
     await AsyncStorage.setItem('oficia:pending-account-type', role);
     setAuthMode('crear'); setAuthNotice(''); setScreen('auth');
+  };
+  const continueSignedIn = async () => {
+    if (!user) { setScreen('auth'); return; }
+    try { await resolveProfile(user); }
+    catch { showMessage('No pudimos abrir tu cuenta', 'Revisa tu conexión e inténtalo de nuevo.'); }
+  };
+  const saveProfile = async (name: string, avatarUrl: string) => {
+    if (!supabase || !user) return;
+    if (avatarUrl && !/^https:\/\//i.test(avatarUrl)) throw new Error('La foto debe usar un enlace HTTPS.');
+    const { data, error } = await supabase.auth.updateUser({ data: { ...user.user_metadata, full_name: name, avatar_url: avatarUrl || null } });
+    if (error) throw error;
+    if (data.user) setUser(data.user);
   };
   useEffect(() => {
     let active = true;
@@ -444,6 +462,7 @@ function AppContent() {
     const { error } = await supabase?.auth.signOut() ?? { error: new Error('No hay conexión de autenticación.') };
     if (error) { showMessage('No se pudo cerrar sesión', error.message); return; }
     await AsyncStorage.removeItem('oficia:pending-account-type');
+    setUser(null); setAccountType(null);
     setPendingAccountType(null); setPendingBooking(false); setAuthMode('entrar'); setAuthNotice(''); setScreen('chooseRole');
   };
 
@@ -453,8 +472,8 @@ function AppContent() {
   const selectedSlotReason = slotReasonFor(selectedDate, selectedTime);
   if (!hydrated || (backendConfigured && !authReady)) return <SafeAreaView style={styles.root} edges={['top', 'bottom']}><View style={styles.loading}><Mark size={70} /><Text style={styles.loadingText}>Preparando Oficia…</Text></View></SafeAreaView>;
   return <SafeAreaView style={[styles.root, (screen === 'auth' || screen === 'chooseRole') && styles.authScreen]} edges={['top', 'bottom']}><StatusBar barStyle={screen === 'auth' || screen === 'chooseRole' ? 'light-content' : 'dark-content'} backgroundColor={screen === 'auth' || screen === 'chooseRole' ? palette.plum : palette.cream} />
-    {screen === 'chooseRole' && <RoleChoice signedIn={Boolean(user)} onChoose={role => { void chooseAccountType(role); }} onSignIn={() => { void AsyncStorage.removeItem('oficia:pending-account-type'); setPendingAccountType(null); setAuthMode('entrar'); setAuthNotice(''); setScreen('auth'); }} />}
-    {screen === 'owner' && user && accountType === 'anfitrion' && <OwnerDashboard userId={user.id} email={user.email ?? 'Cuenta Oficia'} isOperations={isOperations} onOpenOperations={() => { setOperationsNotice(''); setScreen('operations'); refreshRemoteData(user.id).catch(() => setDataNotice('No se pudo actualizar Operaciones.')); }} onSignOut={() => { void confirmSignOut(); }} />}
+    {screen === 'chooseRole' && <RoleChoice signedIn={Boolean(user)} accountLabel={user ? profileDisplayName(user) : undefined} accountEmail={user?.email ?? undefined} accountType={accountType} onContinue={() => { void continueSignedIn(); }} onChoose={role => { void chooseAccountType(role); }} onSignIn={() => { void AsyncStorage.removeItem('oficia:pending-account-type'); setPendingAccountType(null); setAuthMode('entrar'); setAuthNotice(''); setScreen('auth'); }} />}
+    {screen === 'owner' && user && accountType === 'anfitrion' && <OwnerDashboard userId={user.id} email={user.email ?? 'Cuenta Oficia'} profileName={profileDisplayName(user)} avatarUrl={profileAvatarUrl(user)} onSaveProfile={saveProfile} isOperations={isOperations} onOpenOperations={() => { setOperationsNotice(''); setScreen('operations'); refreshRemoteData(user.id).catch(() => setDataNotice('No se pudo actualizar Operaciones.')); }} onSignOut={() => { void confirmSignOut(); }} />}
     {screen === 'auth' && <View style={styles.authScreen}>
       <AuthVideoBackground />
       <View pointerEvents="none" style={styles.authVideoShade} />
@@ -492,7 +511,7 @@ function AppContent() {
       {dataNotice ? <Pressable accessibilityRole="button" onPress={() => { setDataNotice(''); if (supabase) Promise.resolve(supabase.from('spaces').select('*').eq('is_published', true).order('created_at', { ascending: true })).then(({ data, error }) => { if (error) throw error; if (data?.length) setCatalog((data as SpaceRow[]).map(mapSpace)); }).catch(() => setDataNotice('Seguimos mostrando el catálogo de demostración.')); }} style={styles.dataNotice}><Icon name="info" size={17} color={palette.action} /><Text style={styles.dataNoticeText}>{dataNotice}</Text></Pressable> : null}
       {tab === 'Inicio' && <>
         <View style={styles.homeHeader}><View style={styles.homeTop}><View><Text style={styles.locationOverline}>TU UBICACIÓN</Text><View style={styles.headerLocation}><Icon name="pin" size={15} color={palette.white} /><Text style={styles.headerLocationText}>Delicias, Chihuahua</Text><Icon name="chevron" size={15} color={palette.white} /></View></View><View style={styles.bellButton}><Icon name="bell" color={palette.white} size={20} /></View></View>
-          <Text style={styles.homeTitle}>Un espacio para{ '\n'}cada gran idea.</Text><Text style={styles.homeSubtitle}>Encuentra tu lugar ideal para trabajar hoy.</Text>
+          <Text style={styles.homeTitle}>{user ? `Hola, ${profileDisplayName(user).split(' ')[0]}.` : 'Un espacio para cada gran idea.'}</Text><Text style={styles.homeSubtitle}>{user ? 'Tu próximo espacio te está esperando.' : 'Encuentra tu lugar ideal para trabajar hoy.'}</Text>
           <View style={styles.homeSearch}><Icon name="search" size={20} color={palette.action} /><TextInput placeholder="¿Qué espacio necesitas?" placeholderTextColor="#9B8990" style={styles.searchInput} value={search} onChangeText={setSearch} returnKeyType="search" onSubmitEditing={() => setTab('Explorar')} /><Pressable accessibilityRole="button" accessibilityLabel="Abrir filtros" onPress={() => setShowFilters(true)} style={styles.searchAction}><Icon name="filter" size={19} color={palette.white} /></Pressable></View>
         </View>
         <View style={styles.padded}><View style={styles.sectionRow}><Text style={styles.sectionTitle}>Espacios para ti</Text><Pressable onPress={() => chooseTab('Explorar')}><Text style={styles.sectionLink}>Ver todos  →</Text></Pressable></View><CategoryRow category={category} onChange={setCategory} /><View style={styles.promo}><SpacePhoto uri={(catalog[1] ?? catalog[0]).image} label="Oficina para trabajar" style={styles.promoImage} /><View style={styles.promoOverlay} /><View style={styles.promoContent}><Text style={styles.promoBadge}>A TU RITMO</Text><Text style={styles.promoTitle}>Por una hora,{ '\n'}o por toda la semana.</Text><Text style={styles.promoSub}>Tu espacio, a tu hora.</Text></View></View><View style={styles.sectionRow}><Text style={styles.sectionTitle}>Recomendados</Text><Text style={styles.sectionHint}>En Delicias y cerca</Text></View></View>
@@ -510,7 +529,7 @@ function AppContent() {
         return <Pressable key={booking.id} onPress={() => { void openBookingTicket(booking); }} style={styles.reservationCard}><View style={styles.reservationStatus}><Icon name={booking.status === 'Confirmada' ? 'check' : booking.status === 'Rechazada' ? 'close' : 'clock'} size={15} color={palette.action} /><Text style={styles.reservationStatusText}>{booking.status}</Text><Text style={styles.reservationId}>{booking.id}</Text></View><View style={styles.reservationBody}><SpacePhoto uri={space.image} label={`Fotografía de ${space.name}`} style={styles.reservationPhoto} /><View style={styles.reservationInfo}><Text style={styles.reservationName}>{space.name}</Text><Text style={styles.reservationMeta}>{space.area}</Text><Text style={styles.reservationMeta}>{formatDate(booking.date)} · {booking.time}</Text><Text style={styles.reservationPrice}>{formatMoney(booking.total)}</Text><Text style={styles.reservationMeta}>Depósito: {booking.paymentStatus === 'verificado' ? 'verificado' : booking.paymentStatus === 'reportado' ? 'en revisión' : booking.paymentStatus === 'rechazado' ? 'no validado' : 'pendiente'} · Ver ticket</Text></View></View></Pressable>;
       }) : <EmptyState icon="calendar" title="Aún no tienes reservas" message="Encuentra tu espacio y envía una solicitud. El anfitrión confirmará la disponibilidad." action="Explorar espacios" onAction={() => chooseTab('Explorar')} />}</View>}
 
-      {tab === 'Perfil' && <View style={styles.padded}><PageHeader eyebrow="BIENVENIDO" title="Tu perfil" subtitle="Todo para trabajar a tu manera." /><View style={styles.profileCard}><View style={styles.profileAvatar}><Icon name="user" size={29} color={palette.action} /></View><View><Text style={styles.profileTitle}>{user?.email ?? 'Explorador de espacios'}</Text><Text style={styles.profileMeta}>{user ? 'Cuenta Oficia' : 'Delicias, Chihuahua'}</Text></View></View><Text style={styles.sectionTitle}>Acerca de Oficia</Text><Text style={styles.bodyCopy}>Encuentra oficinas privadas, salas de juntas y espacios de coworking equipados cerca de ti. Elige el tiempo que necesitas y envía tu solicitud en minutos.</Text>{isOperations ? <Pressable accessibilityRole="button" accessibilityLabel="Abrir panel de operaciones" onPress={() => { setOperationsNotice(''); setScreen('operations'); if (user) refreshRemoteData(user.id).catch(() => setDataNotice('No se pudieron actualizar las solicitudes.')); }} style={styles.hostEntry}><View style={styles.hostEntryIcon}><Icon name="briefcase" size={23} color={palette.action} /></View><View style={styles.flex}><Text style={styles.hostEntryTitle}>Panel de Operaciones</Text><Text style={styles.hostEntryText}>Depósitos, reservas y cuenta bancaria</Text></View><Icon name="arrow" size={19} color={palette.action} /></Pressable> : null}<View style={styles.profileInfo}><Icon name="info" size={22} color={palette.action} /><View style={styles.flex}><Text style={styles.profileInfoTitle}>{backendConfigured ? 'Catálogo de demostración' : 'Versión de demostración'}</Text><Text style={styles.profileInfoText}>{backendConfigured ? 'Los espacios, fotos y precios actuales son ilustrativos. Las solicitudes enviadas quedan guardadas en tu cuenta y no generan cobro.' : 'Las fotos, los espacios y los precios son ilustrativos. Las solicitudes de este dispositivo se guardan localmente.'}</Text></View></View>{backendConfigured ? <Pressable accessibilityRole="button" accessibilityLabel={user ? 'Cerrar sesión' : 'Iniciar sesión'} onPress={() => { if (user) confirmSignOut(); else { setPendingBooking(false); setAuthNotice(''); setScreen('auth'); } }} style={styles.signOutButton}><View style={styles.signOutIcon}><Icon name={user ? 'power' : 'user'} size={19} color={palette.action} /></View><View style={styles.flex}><Text style={styles.signOutTitle}>{user ? 'Cerrar sesión' : 'Iniciar sesión'}</Text><Text style={styles.signOutCaption}>{user ? 'Salir de tu cuenta de forma segura' : 'Accede a tus reservas y espacios favoritos'}</Text></View><Icon name="arrow" size={17} color={palette.action} /></Pressable> : null}<View style={styles.profileBrand}><Brand /></View></View>}
+      {tab === 'Perfil' && <View style={styles.padded}><PageHeader eyebrow="BIENVENIDO" title="Tu perfil" subtitle="Todo para trabajar a tu manera." />{user ? <ProfileEditor name={profileDisplayName(user)} avatarUrl={profileAvatarUrl(user)} email={user.email ?? ''} accountLabel="Busco espacio · perfil fijo" onSave={saveProfile} /> : <View style={styles.profileCard}><View style={styles.profileAvatar}><Icon name="user" size={29} color={palette.action} /></View><View><Text style={styles.profileTitle}>Explorador de espacios</Text><Text style={styles.profileMeta}>Delicias, Chihuahua</Text></View></View>}<Text style={styles.sectionTitle}>Acerca de Oficia</Text><Text style={styles.bodyCopy}>Encuentra oficinas privadas, salas de juntas y espacios de coworking equipados cerca de ti. Elige el tiempo que necesitas y envía tu solicitud en minutos.</Text>{isOperations ? <Pressable accessibilityRole="button" accessibilityLabel="Abrir panel de operaciones" onPress={() => { setOperationsNotice(''); setScreen('operations'); if (user) refreshRemoteData(user.id).catch(() => setDataNotice('No se pudieron actualizar las solicitudes.')); }} style={styles.hostEntry}><View style={styles.hostEntryIcon}><Icon name="briefcase" size={23} color={palette.action} /></View><View style={styles.flex}><Text style={styles.hostEntryTitle}>Panel de Operaciones</Text><Text style={styles.hostEntryText}>Depósitos, reservas y cuenta bancaria</Text></View><Icon name="arrow" size={19} color={palette.action} /></Pressable> : null}<View style={styles.profileInfo}><Icon name="info" size={22} color={palette.action} /><View style={styles.flex}><Text style={styles.profileInfoTitle}>{backendConfigured ? 'Catálogo de demostración' : 'Versión de demostración'}</Text><Text style={styles.profileInfoText}>{backendConfigured ? 'Los espacios, fotos y precios actuales son ilustrativos. Las solicitudes enviadas quedan guardadas en tu cuenta y no generan cobro.' : 'Las fotos, los espacios y los precios son ilustrativos. Las solicitudes de este dispositivo se guardan localmente.'}</Text></View></View>{backendConfigured ? <Pressable accessibilityRole="button" accessibilityLabel={user ? 'Cerrar sesión' : 'Iniciar sesión'} onPress={() => { if (user) confirmSignOut(); else { setPendingBooking(false); setAuthNotice(''); setScreen('auth'); } }} style={styles.signOutButton}><View style={styles.signOutIcon}><Icon name={user ? 'power' : 'user'} size={19} color={palette.action} /></View><View style={styles.flex}><Text style={styles.signOutTitle}>{user ? 'Cerrar sesión' : 'Iniciar sesión'}</Text><Text style={styles.signOutCaption}>{user ? 'Salir de tu cuenta de forma segura' : 'Accede a tus reservas y espacios favoritos'}</Text></View><Icon name="arrow" size={17} color={palette.action} /></Pressable> : null}<View style={styles.profileBrand}><Brand /></View></View>}
     </ScrollView><TabBar active={tab} onChange={chooseTab} /></>}
 
     {screen === 'detail' && selected && <><ScrollView style={styles.flex} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 116 }}><View style={styles.detailHero}><SpacePhoto uri={selected.gallery[detailImageIndex] ?? selected.image} label={"Fotografía " + (detailImageIndex + 1) + " de " + selected.name} style={styles.heroPhoto} /><Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={goBack} style={[styles.heroButton, { left: 18 }]}><Icon name="back" color={palette.plum} size={20} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel={favoriteIds.has(selected.id) ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={() => toggleFavorite(selected.id)} style={[styles.heroButton, { right: 18 }]}><Icon name="heart" color={favoriteIds.has(selected.id) ? palette.action : palette.plum} filled={favoriteIds.has(selected.id)} size={21} /></Pressable><View style={styles.heroThumbs}>{selected.gallery.slice(0, 3).map((uri, index) => <Pressable key={`${uri}-${index}`} accessibilityRole="button" accessibilityLabel={"Ver foto " + (index + 1)} accessibilityState={{ selected: detailImageIndex === index }} onPress={() => setDetailImageIndex(index)} style={[styles.heroThumb, detailImageIndex === index && styles.heroThumbActive]}><SpacePhoto uri={uri} label={"Fotografía " + (index + 1) + " de " + selected.name} style={styles.heroThumbImage} /></Pressable>)}</View></View><View style={styles.detailBody}><View style={styles.detailTop}><Text style={styles.detailType}>{selected.category.toUpperCase()}</Text>{selected.isDemo ? <View style={styles.detailSampleBadge}><Text style={styles.detailSampleText}>MUESTRA</Text></View> : selected.reviewCount > 0 ? <View style={styles.ratingDetail}><Icon name="star" size={16} color={palette.gold} filled /><Text style={styles.ratingDetailText}>{selected.rating} ({selected.reviewCount} opiniones)</Text></View> : <Text style={styles.ratingDetailText}>Nuevo</Text>}</View><Text style={styles.detailName}>{selected.name}</Text><View style={styles.locationLine}><Icon name="pin" size={16} color={palette.action} /><Text style={styles.detailArea}>{selected.area}, Chihuahua</Text></View><View style={styles.detailStats}><Stat icon="users" text={`Hasta ${selected.capacity} ${selected.capacity === 1 ? 'persona' : 'personas'}`} /><Stat icon="clock" text="Desde 1 hora" /><Stat icon="lock" text={selected.category === 'Coworking' ? 'Área común' : 'Privacidad'} /></View><View style={styles.detailTabs}>{(['Acerca de', 'Galería', 'Opiniones'] as DetailSection[]).map(section => <Pressable key={section} accessibilityRole="tab" accessibilityState={{ selected: detailSection === section }} onPress={() => setDetailSection(section)} style={[styles.detailTab, detailSection === section && styles.detailTabActive]}><Text style={[styles.detailTabText, detailSection === section && styles.detailTabTextActive]}>{section}</Text></Pressable>)}</View>

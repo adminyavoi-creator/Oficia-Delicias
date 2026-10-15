@@ -6,6 +6,7 @@ import { palette } from '../theme';
 import { ownerRevenue } from '../ownerMetrics';
 import { Brand } from './Brand';
 import { Icon, IconName } from './Icon';
+import { ProfileEditor } from './ProfileEditor';
 
 type OwnerTab = 'Inicio' | 'Espacios' | 'Solicitudes' | 'Ingresos' | 'Perfil';
 type OwnedSpace = { id: string; name: string; area: string; is_demo: boolean; is_published: boolean; rate_hour_cents: number };
@@ -22,8 +23,8 @@ const tabs: { label: OwnerTab; icon: IconName }[] = [
 const toMoney = (value: string) => Math.round(Number(value) * 100);
 const formFromDraft = (draft: Draft): DraftForm => ({ id: draft.id, name: draft.name, area: draft.area, city: draft.city, address: draft.address, latitude: draft.latitude == null ? '' : String(draft.latitude), longitude: draft.longitude == null ? '' : String(draft.longitude), open_days: draft.open_days, opens_at: draft.opens_at.slice(0, 5), closes_at: draft.closes_at.slice(0, 5), photo_path: draft.photo_path, category: draft.category, capacity: String(draft.capacity), description: draft.description, privacy: draft.privacy, image_url: draft.image_url, hour: String(draft.rate_hour_cents / 100), day: String(draft.rate_day_cents / 100), week: String(draft.rate_week_cents / 100) });
 
-export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, onSignOut }: {
-  userId: string; email: string; isOperations: boolean; onOpenOperations: () => void; onSignOut: () => void;
+export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSaveProfile, isOperations, onOpenOperations, onSignOut }: {
+  userId: string; email: string; profileName: string; avatarUrl: string; onSaveProfile: (name: string, avatarUrl: string) => Promise<void>; isOperations: boolean; onOpenOperations: () => void; onSignOut: () => void;
 }) {
   const [tab, setTab] = useState<OwnerTab>('Inicio');
   const [spaces, setSpaces] = useState<OwnedSpace[]>([]);
@@ -156,7 +157,7 @@ export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, 
       <View style={styles.header}><Brand compact /><Pressable accessibilityRole="button" accessibilityLabel="Actualizar panel" onPress={() => refresh().catch(() => setNotice('No se pudo actualizar el panel.'))} style={styles.refresh}><Icon name="refresh" size={19} color={palette.action} /></Pressable></View>
       {notice ? <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text> : null}
       {tab === 'Inicio' && <>
-        <Text style={styles.eyebrow}>TU ACTIVIDAD</Text><Text style={styles.title}>Tu espacio también trabaja para ti.</Text>
+        <Text style={styles.eyebrow}>TU ACTIVIDAD</Text><Text style={styles.title}>Hola, {profileName.split(' ')[0]}.</Text><Text style={styles.small}>Tu espacio también trabaja para ti.</Text>
         <View style={styles.stats}><Stat label="Solicitudes" value={String(waiting)} /><Stat label="Espacios" value={String(spaces.filter(space => !space.is_demo).length + drafts.length)} /><Stat label="Ingresos confirmados" value={formatMoney(gross)} wide /></View>
         <Text style={styles.section}>Mis espacios</Text>
         {spaces.filter(space => !space.is_demo).length || drafts.length ? <>{spaces.filter(space => !space.is_demo).map(space => <SpaceLine key={space.id} name={space.name} detail={space.area} badge={space.is_published ? 'Publicado' : 'Pausado'} />)}{drafts.slice(0, 3).map(draft => <SpaceLine key={draft.id} name={draft.name || 'Espacio sin nombre'} detail={draft.area || 'Completa la zona'} badge={draft.status === 'en_revision' ? 'En revisión' : draft.status === 'aprobado' ? 'Validado' : draft.status === 'rechazado' ? 'Con observaciones' : 'Borrador'} />)}</> : <Empty text="Agrega tu primer espacio para comenzar." />}
@@ -200,7 +201,7 @@ export function OwnerDashboard({ userId, email, isOperations, onOpenOperations, 
         {spaces.filter(space => !space.is_demo).length ? spaces.filter(space => !space.is_demo).map(space => { const count = revenue.confirmed.filter(booking => booking.space_id === space.id).length; return <View key={space.id} style={styles.booking}><View style={styles.line}><Text style={styles.cardTitle}>{space.name}</Text><Text style={styles.amount}>{formatMoney((revenue.bySpaceCents.get(space.id) ?? 0) / 100)}</Text></View><Text style={styles.small}>{count} {count === 1 ? 'renta autorizada' : 'rentas autorizadas'}</Text></View>; }) : <Empty text="Los ingresos de espacios reales aparecerán aquí cuando Operaciones valide un depósito." />}
         <Text style={styles.small}>Los importes son brutos. Comisiones, impuestos y liquidaciones aún no están configurados.</Text>
       </>}
-      {tab === 'Perfil' && <><Text style={styles.eyebrow}>CUENTA</Text><Text style={styles.title}>Perfil de anfitrión</Text><View style={styles.booking}><Text style={styles.cardTitle}>{email}</Text><Text style={styles.small}>Rento espacio · perfil fijo de esta cuenta</Text></View>
+      {tab === 'Perfil' && <><Text style={styles.eyebrow}>CUENTA</Text><Text style={styles.title}>Perfil de anfitrión</Text><ProfileEditor name={profileName} avatarUrl={avatarUrl} email={email} accountLabel="Rento espacio · perfil fijo" onSave={onSaveProfile} />
         {isOperations ? <Pressable accessibilityRole="button" onPress={onOpenOperations} style={styles.secondary}><Text style={styles.secondaryText}>Abrir Operaciones</Text></Pressable> : null}
         <Pressable accessibilityRole="button" onPress={onSignOut} style={styles.secondary}><Text style={styles.secondaryText}>Cerrar sesión</Text></Pressable>
       </>}
