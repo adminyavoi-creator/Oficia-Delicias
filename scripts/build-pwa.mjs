@@ -25,6 +25,8 @@ for (const path of files) {
   revisionHash.update(path).update(await readFile(join(directory, relativePath)));
 }
 const revision = revisionHash.digest('hex').slice(0, 12);
+await writeFile(join(directory, 'build-info.json'), JSON.stringify({ frontendRevision: revision }) + '\\n');
+files.push('/build-info.json');
 const swPath = join(directory, 'sw.js');
 const sw = await readFile(swPath, 'utf8');
 await writeFile(swPath, sw.replace('/* Vite replaces this placeholder with the generated production asset list. */', `/* Generated for Oficia build ${revision}. */`).replace('self.__OFICIA_PRECACHE__ || [\'/\']', JSON.stringify(files)).replace('__OFICIA_REVISION__', revision));
