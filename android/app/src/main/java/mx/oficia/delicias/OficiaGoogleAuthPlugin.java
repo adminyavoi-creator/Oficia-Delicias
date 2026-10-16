@@ -36,8 +36,12 @@ public class OficiaGoogleAuthPlugin extends Plugin {
     @ActivityCallback
     private void handleSignInResult(PluginCall call, ActivityResult result) {
         if (call == null) return;
-        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) {
-            call.reject("No se completó el acceso con Google.");
+        if (result.getData() == null) {
+            if (result.getResultCode() == Activity.RESULT_CANCELED) {
+                resolveCancelled(call);
+            } else {
+                call.reject("GOOGLE_AUTH_NO_RESULT");
+            }
             return;
         }
 
@@ -46,15 +50,25 @@ public class OficiaGoogleAuthPlugin extends Plugin {
                 .getResult(ApiException.class);
             String idToken = account == null ? null : account.getIdToken();
             if (idToken == null || idToken.isEmpty()) {
-                call.reject("Google no devolvió un token de identidad.");
+                call.reject("GOOGLE_AUTH_NO_ID_TOKEN");
                 return;
             }
             JSObject response = new JSObject();
             response.put("idToken", idToken);
             call.resolve(response);
         } catch (ApiException error) {
-            call.reject("Google no pudo validar la cuenta (código " + error.getStatusCode() + ").", error);
+            if (error.getStatusCode() == 12501) {
+                resolveCancelled(call);
+            } else {
+                call.reject("GOOGLE_AUTH_STATUS_" + error.getStatusCode(), error);
+            }
         }
+    }
+
+    private void resolveCancelled(PluginCall call) {
+        JSObject response = new JSObject();
+        response.put("canceled", true);
+        call.resolve(response);
     }
 
     @PluginMethod
