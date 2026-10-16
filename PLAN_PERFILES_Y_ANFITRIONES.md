@@ -22,24 +22,24 @@ Si alguien necesita ambas actividades, deberá usar dos cuentas distintas. Un ca
 | --- | --- | --- |
 | Inicio | Buscar, categorías, ofertas, espacios cercanos | Indicadores, espacios propios y solicitudes nuevas |
 | Espacios | Explorar lista/mapa, filtros, fotos y servicios | Crear/editar borradores, enviar a revisión, estado de cada espacio |
-| Solicitudes | Elegir estancia, enviar, ver ticket y depósito | Agenda e historial de solicitudes de espacios propios; Operaciones valida pagos |
-| Ingresos | No aplica | Importe bruto de depósitos verificados y rentas autorizadas, por espacio; excluye muestras |
+| Solicitudes | Elegir estancia, enviar y consultar ticket informativo | Agenda e historial de solicitudes de espacios propios; Operaciones consulta tickets |
+| Tickets | No aplica | Desglose estimado de renta, tarifa hipotética de Oficia y referencia para el dueño; excluye muestras |
 | Perfil | Datos de cuenta editables, favoritos, reservas y cierre de sesión | Datos de cuenta editables, tipo de perfil fijo y cierre de sesión; acceso a Operaciones si está autorizado |
 
 ### Botones principales
 
-- Cliente: **Explorar espacios → Ver ficha → Elegir fecha y hora → Enviar solicitud → Ver ticket → Reportar depósito → Actualizar estado**.
+- Cliente: **Explorar espacios → Ver ficha → Elegir fecha y hora → Enviar solicitud → Ver ticket → Consultar estado**.
 - Dueño: **Agregar espacio → Guardar borrador → Enviar a revisión → Consultar estado**.
-- Operaciones: **Revisar espacio → Validar datos o Devolver con motivo**; **Validar depósito y autorizar**, siempre después de comprobar el banco.
+- Operaciones: **Revisar espacio → Validar datos o Devolver con motivo**; consultar tickets y coordinar la disponibilidad sin procesar pagos.
 
-## Datos, privacidad e ingresos
+## Datos, privacidad y desglose informativo
 
 - `oficia_profiles` fija `cliente` o `anfitrion` bajo RLS. El rol no se confía a `user_metadata`, parámetros de URL ni almacenamiento local.
 - `space_drafts` es privado para su dueño y Operaciones. Guardar o validar un borrador **no** lo publica ni habilita rentas.
 - Las solicitudes siguen protegidas por RLS. El dueño solo ve las de sus espacios; el cliente solo ve las propias. Operaciones puede revisarlas por su permiso interno.
-- La pantalla de ingresos suma centavos de solicitudes `confirmada` con depósito `verificado`, y solo en espacios **reales** del dueño. Muestra importe **bruto**, no utilidad neta ni dinero liquidado al anfitrión.
-- No existe aún una regla de comisión, impuestos, payout ni conciliación de liquidaciones. No se mostrarán como ganancias netas hasta implementarlas y verificarlas.
-- El catálogo actual contiene únicamente cuatro muestras: por eso el ingreso real presentado es $0 MXN.
+- La pantalla de tickets suma solicitudes activas de espacios **reales** del dueño. Separa renta base, tarifa hipotética de Oficia del 15%, IVA estimado sobre esa tarifa y referencia neta antes de impuestos del anfitrión. Son importes de simulación, no ingresos, utilidad ni dinero liquidado.
+- Oficia no recibe, retiene, cobra ni concilia dinero. Se retiraron las instrucciones bancarias de la app y Supabase deniega actualización de pagos y lectura de datos bancarios a clientes y anfitriones.
+- El catálogo actual contiene únicamente cuatro muestras: por eso no hay tickets comerciales reales en el panel.
 
 ## Estado y próximos cierres
 
@@ -49,11 +49,11 @@ Si alguien necesita ambas actividades, deberá usar dos cuentas distintas. Un ca
 | Recuperación de sesión/perfil | Consulta previa y recuperación de inserciones duplicadas implementadas; continuidad visible para sesión activa | Reabrir la app, iniciar sesión con cliente y anfitrión existentes, entrar desde ambos caminos y confirmar que el rol fijo siempre abre su inicio sin duplicar perfil |
 | Personalización de nombre y foto | Metadatos de Google y edición desde Perfil implementados para ambos roles | Verificar nombre y foto guardados en una sesión real y que sobrevivan al cierre/apertura; confirmar que URL inválida no se guarde |
 | Perfil fijo y permisos | Migración aplicada; RLS y bloqueos probados en transacción | Prueba funcional completa desde la interfaz |
-| Panel de dueño | Inicio, espacios, solicitudes, ingresos y perfil; ficha con dirección, horario habitual y foto | Calendario de cierres, reportes y notificaciones |
+| Panel de dueño | Inicio, espacios, solicitudes, tickets y perfil; ficha con dirección, horario habitual y foto | Ampliar agenda de cierres, reportes y notificaciones |
 | Borradores y revisión | Guardar, editar, enviar, validar o devolver; foto privada en Storage | Probar carga real y coordenadas, documentos y publicación controlada |
 | Publicación de espacios reales | Pendiente | Datos y fotos autorizados; validación de ubicación, disponibilidad y condiciones |
-| Historial financiero | Bruto por espacio implementado | Libro de movimientos, comisiones, impuestos, devoluciones y liquidaciones |
+| Historial de tickets | Desglose estimado por espacio implementado | Verificar con solicitudes reales y dos cuentas; cualquier historial financiero futuro requiere definición legal y fiscal separada |
 | Mensajes y avisos | Pendiente | Chat seguro, correos/avisos operativos y trazabilidad |
-| Distribución Android | AAB 1.1.0 firmado, verificado y disponible en Play interno para un verificador | Prueba en teléfono; producción pendiente de requisitos de Play |
+| Distribución Android | AAB 1.2.5/código 8 disponible en prueba interna; PWA comparte el mismo código | Probar el nuevo AAB en teléfono; producción pendiente de requisitos de Play |
 
-**Criterio de salida para el flujo de dueño:** un anfitrión nuevo puede iniciar con correo o Google, crear un borrador, enviarlo a Operaciones, recibir decisión y consultar sus propias solicitudes e ingresos reales; un cliente no puede ver ni modificar esos datos. La publicación comercial exige inventario verificado y pruebas de disponibilidad y pagos.
+**Criterio de salida para el flujo de dueño:** un anfitrión nuevo puede iniciar con correo o Google, crear un borrador, enviarlo a Operaciones, recibir decisión y consultar sus propias solicitudes y tickets informativos; un cliente no puede ver ni modificar esos datos. La publicación comercial exige inventario, ubicación y disponibilidad verificados. Cualquier flujo futuro de dinero requiere una decisión independiente.
