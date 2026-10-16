@@ -21,7 +21,7 @@ for (const entry of entries) {
   if (content.includes('vfvqmlsgqxiarmbquhco.supabase.co')) hasSupabaseProject = true;
 }
 if (!hasSupabaseProject) {
-  console.error('Android quedó sin backend de Oficia; no se generará una app de demostración.');
+  console.error('Android quedó sin conexión al backend de Oficia; no se generará una app en modo de demostración.');
   process.exit(1);
 }
 

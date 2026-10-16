@@ -29,12 +29,9 @@ async function fcmBearer(account: { client_email: string; private_key: string })
 
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return json(405, { error: "method_not_allowed" });
-  // Supabase verifies the JWT before this function runs; accept only the service role used by the scheduled worker.
-  const raw = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  try {
-    const payload = JSON.parse(atob(raw.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    if (payload.role !== "service_role") return json(403, { error: "forbidden" });
-  } catch { return json(403, { error: "forbidden" }); }
+  // Supabase verifies the JWT before this function runs. The database scheduler
+  // uses the project's public API key from Vault; the function itself keeps the
+  // service-role credential private for database and FCM work.
 
   const url = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -121,13 +118,26 @@ Deno.serve(async (request: Request) => {
   let delivered = 0;
   let failed = 0;
   for (const item of (pending.data ?? []) as Outbox[]) {
-    const devices = await db.from("push_devices").select("id,token").eq("user_id", item.user_id).eq("is_active", true);
+    const devices = await db.from("push_devices").select("id,token,platform").eq("user_id", item.user_id).eq("is_active", true);
     if (devices.error) { failed++; continue; }
     let complete = true;
     for (const device of devices.data ?? []) {
+      const data = Object.fromEntries([
+        ...Object.entries(item.data ?? {}).map(([key, value]) => [key, String(value)]),
+        ["title", item.title],
+        ["body", item.body],
+      ]);
+      const message = device.platform === "web"
+        ? { token: device.token, data, webpush: { headers: { Urgency: "high" } } }
+        : {
+          token: device.token,
+          notification: { title: item.title, body: item.body },
+          data,
+          android: { priority: "HIGH", notification: { channel_id: "default" } },
+        };
       const fcm = await fetch(`https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`, {
         method: "POST", headers: { authorization: `Bearer ${bearer}`, "content-type": "application/json" },
-        body: JSON.stringify({ message: { token: device.token, notification: { title: item.title, body: item.body }, data: Object.fromEntries(Object.entries(item.data ?? {}).map(([key, value]) => [key, String(value)])), android: { priority: "HIGH", notification: { channel_id: "default" } } } }),
+        body: JSON.stringify({ message }),
       });
       if (!fcm.ok) {
         complete = false;

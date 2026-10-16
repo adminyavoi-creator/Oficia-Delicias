@@ -1,4 +1,37 @@
 /* Vite replaces this placeholder with the generated production asset list. */
+const firebaseConfig = __OFICIA_FIREBASE_CONFIG__;
+if (firebaseConfig?.apiKey && firebaseConfig?.appId) {
+  importScripts('https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js');
+  importScripts('https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging-compat.js');
+  firebase.initializeApp(firebaseConfig);
+  const messaging = firebase.messaging();
+  messaging.onBackgroundMessage(payload => {
+    const data = payload.data ?? {};
+    const title = payload.notification?.title ?? 'Oficia';
+    return self.registration.showNotification(title, {
+      body: payload.notification?.body ?? 'Tienes una actualización.',
+      icon: '/pwa-192x192.png',
+      badge: '/pwa-192x192.png',
+      tag: data.bookingId ? `oficia-${data.bookingId}` : `oficia-${Date.now()}`,
+      data,
+    });
+  });
+
+  self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    const data = event.notification.data ?? {};
+    const target = new URL('/', self.location.origin);
+    target.searchParams.set('oficia_screen', String(data.screen ?? 'home'));
+    if (data.bookingId) target.searchParams.set('oficia_bookingId', String(data.bookingId));
+    if (data.spaceId) target.searchParams.set('oficia_spaceId', String(data.spaceId));
+    event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windows => {
+      const client = windows.find(window => new URL(window.url).origin === self.location.origin);
+      if (client) return client.navigate(target.href).then(() => client.focus());
+      return self.clients.openWindow(target.href);
+    }));
+  });
+}
+
 const PRECACHE = self.__OFICIA_PRECACHE__ || ['/'];
 const CACHE_PREFIX = 'oficia-pwa-';
 const CACHE_NAME = `${CACHE_PREFIX}__OFICIA_REVISION__`;

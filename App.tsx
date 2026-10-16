@@ -23,7 +23,7 @@ import { ProfileEditor } from './src/components/ProfileEditor';
 import { SpaceReviews } from './src/components/SpaceReviews';
 import { OperationsReviews } from './src/components/OperationsReviews';
 import { profileAvatarUrl, profileDisplayName } from './src/profileMetadata';
-import { deactivatePushForUser, enablePushForUser, getPushPermission, isNativePushAvailable } from './src/pushNotifications';
+import { deactivatePushForUser, enablePushForUser, getPushPermission } from './src/pushNotifications';
 import { NotificationSettings } from './src/components/NotificationSettings';
 import { OperationsNotifications } from './src/components/OperationsNotifications';
 
@@ -95,6 +95,16 @@ function AppContent() {
   const handleForegroundPush = useCallback((notification: { title?: string; body?: string; data?: Record<string, unknown> }) => {
     setForegroundNotification(notification);
   }, []);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('oficia_screen')) {
+      handlePushOpen({ screen: url.searchParams.get('oficia_screen') ?? 'home', bookingId: url.searchParams.get('oficia_bookingId') ?? undefined, spaceId: url.searchParams.get('oficia_spaceId') ?? undefined });
+      url.searchParams.delete('oficia_screen');
+      url.searchParams.delete('oficia_bookingId');
+      url.searchParams.delete('oficia_spaceId');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+  }, [handlePushOpen]);
   const filtered = useMemo(() => {
     const matches = catalog.filter(space =>
       (category === 'Todos' || space.category === category) &&
@@ -258,7 +268,7 @@ function AppContent() {
     return () => { active = false; };
   }, [user?.id, authReady]);
   useEffect(() => {
-    if (!user || !accountType || !isNativePushAvailable()) return;
+    if (!user || !accountType) return;
     let active = true;
     const startPush = async () => {
       const permission = await getPushPermission();

@@ -2,19 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '../backend';
 import { AccountType } from '../profiles';
-import { pushDeliveryConfigured } from '../pushNotifications';
+import { deactivatePushForUser, isNativePushAvailable, pushDeliveryConfigured } from '../pushNotifications';
 import { palette } from '../theme';
 import { Icon } from './Icon';
 
 type PrefKey = 'booking_updates' | 'reminders' | 'space_updates' | 'reviews' | 'promotions';
 type Preferences = Record<PrefKey, boolean>;
 const defaults: Preferences = { booking_updates: true, reminders: true, space_updates: true, reviews: true, promotions: false };
-const rows: { key: PrefKey; title: string; caption: string }[] = [
-  { key: 'booking_updates', title: 'Solicitudes y reservas', caption: 'Nuevas solicitudes y cambios de estado' },
-  { key: 'reminders', title: 'Recordatorios', caption: 'Avisos antes de una renta confirmada' },
-  { key: 'space_updates', title: 'Espacios', caption: 'Revisión y publicación de tus fichas' },
-  { key: 'reviews', title: 'Opiniones', caption: 'Avisos para compartir o recibir una reseña' },
-  { key: 'promotions', title: 'Ofertas y novedades', caption: 'Opcional; solo si quieres recibir promociones' },
+const rows: { key: PrefKey; title: string; caption: string; roles: AccountType[] }[] = [
+  { key: 'booking_updates', title: 'Solicitudes y reservas', caption: 'Nuevas solicitudes y cambios de estado', roles: ['cliente','anfitrion'] },
+  { key: 'reminders', title: 'Recordatorios', caption: 'Avisos antes de una renta confirmada', roles: ['cliente','anfitrion'] },
+  { key: 'space_updates', title: 'Espacios', caption: 'Revisión y publicación de tus fichas', roles: ['anfitrion'] },
+  { key: 'reviews', title: 'Opiniones', caption: 'Avisos para compartir o recibir una reseña', roles: ['cliente','anfitrion'] },
+  { key: 'promotions', title: 'Ofertas y novedades', caption: 'Opcional; solo si quieres recibir promociones', roles: ['cliente','anfitrion'] },
 ];
 
 export function NotificationSettings({ userId, accountType, requestPermission }: { userId: string; accountType: AccountType; requestPermission: () => Promise<boolean> }) {
@@ -29,7 +29,7 @@ export function NotificationSettings({ userId, accountType, requestPermission }:
     if (!supabase) { setLoading(false); setPermission('unavailable'); return; }
     supabase.from('notification_preferences').select('booking_updates,reminders,space_updates,reviews,promotions').eq('user_id', userId).maybeSingle()
       .then(({ data }) => { if (active && data) setPrefs({ ...defaults, ...data }); if (active) setLoading(false); }, () => { if (active) setLoading(false); });
-    supabase.from('push_devices').select('id').eq('user_id', userId).eq('is_active', true).limit(1)
+    supabase.from('push_devices').select('id').eq('user_id', userId).eq('platform', isNativePushAvailable() ? 'android' : 'web').eq('is_active', true).limit(1)
       .then(({ data }) => { if (active) setPermission(data?.length ? 'enabled' : 'disabled'); }, () => { if (active) setPermission('disabled'); });
     return () => { active = false; };
   }, [userId]);
@@ -55,12 +55,19 @@ export function NotificationSettings({ userId, accountType, requestPermission }:
     setPermission(enabled ? 'enabled' : 'disabled');
     setNotice(enabled ? 'Notificaciones activadas en este dispositivo.' : 'Puedes habilitarlas desde los ajustes de Android.');
   };
+  const disable = async () => {
+    setNotice('');
+    await deactivatePushForUser(userId);
+    setPermission('disabled');
+    setNotice('Notificaciones desactivadas en este dispositivo.');
+  };
 
   return <View style={styles.card}>
     <View style={styles.heading}><View style={styles.icon}><Icon name="bell" size={19} color={palette.action} /></View><View style={{ flex: 1 }}><Text style={styles.title}>Notificaciones</Text><Text style={styles.caption}>{accountType === 'cliente' ? 'Reservas, espacios y novedades' : 'Solicitudes, rentas y novedades'}</Text></View></View>
-    {pushDeliveryConfigured && (permission === 'disabled' || permission === 'unknown') ? <Pressable accessibilityRole="button" onPress={() => void enable()} style={styles.enable}><Text style={styles.enableText}>Activar en este dispositivo</Text><Icon name="arrow" size={16} color={palette.action} /></Pressable> : null}
-    {permission === 'unavailable' ? <Text style={styles.note}>{pushDeliveryConfigured ? 'La recepción de avisos push está disponible en la app Android.' : 'Las notificaciones push se activarán cuando se complete la conexión segura con Firebase.'}</Text> : null}
-    {rows.map(row => <Pressable key={row.key} accessibilityRole="switch" accessibilityState={{ checked: prefs[row.key], disabled: loading || saving !== null }} disabled={loading || saving !== null} onPress={() => void toggle(row.key)} style={styles.row}>
+    {pushDeliveryConfigured && permission !== 'enabled' ? <Pressable accessibilityRole="button" onPress={() => void enable()} style={styles.enable}><Text style={styles.enableText}>Activar en este dispositivo</Text><Icon name="arrow" size={16} color={palette.action} /></Pressable> : null}
+    {pushDeliveryConfigured && permission === 'enabled' ? <Pressable accessibilityRole="button" onPress={() => void disable()} style={styles.enable}><Text style={styles.enableText}>Desactivar en este dispositivo</Text><Icon name="close" size={16} color={palette.action} /></Pressable> : null}
+    {permission === 'unavailable' ? <Text style={styles.note}>{pushDeliveryConfigured ? 'Activa las notificaciones en los ajustes de tu dispositivo.' : 'La conexión de notificaciones todavía no está lista.'}</Text> : null}
+    {rows.filter(row => row.roles.includes(accountType)).map(row => <Pressable key={row.key} accessibilityRole="switch" accessibilityState={{ checked: prefs[row.key], disabled: loading || saving !== null }} disabled={loading || saving !== null} onPress={() => void toggle(row.key)} style={styles.row}>
       <View style={{ flex: 1 }}><Text style={styles.rowTitle}>{row.title}</Text><Text style={styles.rowCaption}>{row.caption}</Text></View>
       <View style={[styles.switch, prefs[row.key] && styles.switchOn]}><View style={[styles.knob, prefs[row.key] && styles.knobOn]} /></View>
     </Pressable>)}
