@@ -14,6 +14,7 @@ type OwnerTab = 'Inicio' | 'Espacios' | 'Solicitudes' | 'Tickets' | 'Perfil';
 type OwnedSpace = { id: string; name: string; area: string; is_demo: boolean; is_published: boolean; rate_hour_cents: number };
 type Closure = { space_id: string; closed_on: string };
 type OwnerBooking = { id: string; space_id: string; local_date: string; local_time: string; starts_at: string; ends_at: string; completed_at: string | null; quantity: number; unit: string; total_cents: number; operations_fee_cents: number; operations_fee_vat_estimate_cents: number; owner_balance_estimate_cents: number; status: string; payment_status: string; created_at: string };
+type OwnerFinancialEvent = { id: string; booking_id: string; direction: 'cobro_cliente' | 'pago_anfitrion' | 'reembolso_cliente'; amount_cents: number; event_date: string };
 type Draft = { id: string; name: string; area: string; city: string; address: string; latitude: number | null; longitude: number | null; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: number; description: string; privacy: string; amenities: string[]; image_url: string; rate_hour_cents: number; rate_day_cents: number; rate_week_cents: number; status: string; rejection_reason: string | null };
 type DraftForm = { id?: string; name: string; area: string; city: string; address: string; latitude: string; longitude: string; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: string; description: string; privacy: string; amenities: string[]; image_url: string; hour: string; day: string; week: string };
 
@@ -34,6 +35,7 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
   const [spaces, setSpaces] = useState<OwnedSpace[]>([]);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [bookings, setBookings] = useState<OwnerBooking[]>([]);
+  const [financialEvents, setFinancialEvents] = useState<OwnerFinancialEvent[]>([]);
   const [closures, setClosures] = useState<Closure[]>([]);
   const closureDates = useMemo(() => nextDates(180), []);
   const closureMonths = useMemo(() => [...new Set(closureDates.map(date => date.key.slice(0, 7)))], [closureDates]);
@@ -59,10 +61,16 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
       ? await supabase.from('space_closures').select('space_id,closed_on').in('space_id', [...ids]).gte('closed_on', closureDates[0].key).lte('closed_on', closureDates[closureDates.length - 1].key)
       : { data: [], error: null };
     if (closureResult.error) throw closureResult.error;
+    const ownBookings = ((requests.data ?? []) as OwnerBooking[]).filter(booking => ids.has(booking.space_id));
+    const ledgerResult = ownBookings.length
+      ? await supabase.from('booking_financial_events').select('id,booking_id,direction,amount_cents,event_date').in('booking_id', ownBookings.map(booking => booking.id)).order('event_date', { ascending: false })
+      : { data: [], error: null };
+    if (ledgerResult.error) throw ledgerResult.error;
     setSpaces(ownedSpaces);
     setClosures((closureResult.data ?? []) as Closure[]);
     setDrafts((draftsResult.data ?? []) as Draft[]);
-    setBookings(((requests.data ?? []) as OwnerBooking[]).filter(booking => ids.has(booking.space_id)));
+    setBookings(ownBookings);
+    setFinancialEvents((ledgerResult.data ?? []) as OwnerFinancialEvent[]);
     setLoadError(false);
   }, [userId, closureDates]);
   useEffect(() => {
@@ -96,20 +104,13 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
     }
     setBusy(false);
   };
-  const updateBooking = async (booking: OwnerBooking, action: 'confirmar' | 'rechazar' | 'finalizar') => {
+  const updateBooking = async (booking: OwnerBooking) => {
     if (!supabase || busy) return;
     setBusy(true); setNotice('');
-    const values = action === 'confirmar'
-      ? { status: 'confirmada', rejection_reason: null }
-      : action === 'rechazar'
-        ? { status: 'rechazada', rejection_reason: 'No disponible para ese horario.' }
-        : { completed_at: new Date().toISOString() };
-    const { error } = await supabase.from('bookings').update(values).eq('id', booking.id);
-    if (error) setNotice(action === 'finalizar'
-      ? 'No se pudo marcar como realizada. Actualiza la solicitud e inténtalo de nuevo.'
-      : 'No se pudo actualizar la solicitud. Actualiza e inténtalo de nuevo.');
+    const { error } = await supabase.from('bookings').update({ completed_at: new Date().toISOString() }).eq('id', booking.id);
+    if (error) setNotice('No se pudo marcar como realizada. Actualiza la solicitud e inténtalo de nuevo.');
     else {
-      setNotice(action === 'confirmar' ? 'Solicitud aceptada. El cliente podrá ver la autorización.' : action === 'rechazar' ? 'Solicitud rechazada.' : 'Renta finalizada. El cliente ya puede dejar su opinión.');
+      setNotice('Renta finalizada. El cliente ya puede dejar su opinión.');
       await refresh().catch(() => setNotice('La solicitud se guardó. Actualiza el panel para ver el cambio.'));
     }
     setBusy(false);
@@ -238,19 +239,20 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
             <View style={styles.line}><Text style={styles.cardTitle}>{spaceName(booking.space_id)}</Text><Text style={styles.badge}>{booking.completed_at ? 'Realizada' : booking.status === 'confirmada' ? 'Autorizada' : booking.status === 'rechazada' ? 'Rechazada' : 'Pendiente'}</Text></View>
             <Text style={styles.small}>{formatDate(booking.local_date)} · {booking.local_time.slice(0, 5)} · {booking.quantity} {booking.unit.toLowerCase()}</Text>
             <Text style={styles.amount}>{formatMoney(booking.total_cents / 100)}</Text><Text style={styles.small}>Ticket informativo · sin cobro</Text>
-            {!sample && booking.status === 'pendiente' ? <View style={styles.bookingActions}><Pressable accessibilityRole="button" disabled={busy} onPress={() => void updateBooking(booking, 'confirmar')} style={styles.action}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Aceptar solicitud'}</Text></Pressable><Pressable accessibilityRole="button" disabled={busy} onPress={() => void updateBooking(booking, 'rechazar')} style={styles.secondary}><Text style={styles.secondaryText}>Rechazar</Text></Pressable></View> : null}
-            {!sample && canComplete ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => void updateBooking(booking, 'finalizar')} style={styles.action}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Marcar como realizada'}</Text></Pressable> : null}
+            {financialEvents.filter(event => event.booking_id === booking.id).map(event => <Text key={event.id} style={styles.reviewHint}>{ownerMovementLabel(event.direction)} · {formatMoney(event.amount_cents / 100)} · {formatDate(event.event_date)}</Text>)}
+            {!sample && booking.status === 'pendiente' ? <Text style={styles.reviewHint}>Operaciones validará el cobro externo y autorizará la renta.</Text> : null}
+            {!sample && canComplete ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => void updateBooking(booking)} style={styles.action}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Marcar como realizada'}</Text></Pressable> : null}
             {!sample && booking.completed_at ? <Text style={styles.reviewHint}>El cliente ya puede calificar esta renta.</Text> : null}
           </View>;
         }) : <Empty text="Las solicitudes para tus espacios aparecerán aquí." />}
         <Text style={styles.small}>Cada solicitud genera un ticket estimado. No se procesa dinero en Oficia.</Text>
       </>}
       {tab === 'Tickets' && !loadError && <><Text style={styles.eyebrow}>DESGLOSE</Text><Text style={styles.title}>Tickets por espacio</Text><View style={styles.incomeHero}><Text style={styles.incomeLabel}>Importe de solicitudes activas</Text><Text style={styles.incomeValue}>{formatMoney(gross)}</Text><Text style={styles.incomeHint}>Referencia informativa; no representa ingresos cobrados.</Text></View>
-        {spaces.filter(space => !space.is_demo).length ? spaces.filter(space => !space.is_demo).map(space => { const spaceBookings = estimates.active.filter(booking => booking.space_id === space.id); const count = spaceBookings.length; return <View key={space.id}><View style={styles.booking}><View style={styles.line}><Text style={styles.cardTitle}>{space.name}</Text><Text style={styles.amount}>{formatMoney((estimates.bySpaceCents.get(space.id) ?? 0) / 100)}</Text></View><Text style={styles.small}>{count} {count === 1 ? 'ticket estimado' : 'tickets estimados'}</Text></View>{spaceBookings.map(booking => <View key={booking.id} style={styles.statement}><View style={styles.line}><Text style={styles.cardTitle}>Desglose · {formatDate(booking.local_date)}</Text><Text style={styles.badge}>{booking.id}</Text></View><StatementLine label="Renta base" value={formatMoney(booking.total_cents / 100)} /><StatementLine label="Tarifa Oficia estimada · 15%" value={`− ${formatMoney(booking.operations_fee_cents / 100)}`} /><StatementLine label="IVA estimado sobre la comisión · 16%" value={`− ${formatMoney(booking.operations_fee_vat_estimate_cents / 100)}`} /><View style={styles.statementTotal}><Text style={styles.cardTitle}>Referencia del dueño antes de sus impuestos</Text><Text style={styles.amount}>{formatMoney(booking.owner_balance_estimate_cents / 100)}</Text></View></View>)}</View>; }) : <Empty text="Los tickets de espacios reales aparecerán aquí cuando lleguen solicitudes." />}
+        {spaces.filter(space => !space.is_demo).length ? spaces.filter(space => !space.is_demo).map(space => { const spaceBookings = estimates.active.filter(booking => booking.space_id === space.id); const count = spaceBookings.length; return <View key={space.id}><View style={styles.booking}><View style={styles.line}><Text style={styles.cardTitle}>{space.name}</Text><Text style={styles.amount}>{formatMoney((estimates.bySpaceCents.get(space.id) ?? 0) / 100)}</Text></View><Text style={styles.small}>{count} {count === 1 ? 'ticket estimado' : 'tickets estimados'}</Text></View>{spaceBookings.map(booking => <View key={booking.id} style={styles.statement}><View style={styles.line}><Text style={styles.cardTitle}>Desglose · {formatDate(booking.local_date)}</Text><Text style={styles.badge}>{booking.id}</Text></View><StatementLine label="Renta base" value={formatMoney(booking.total_cents / 100)} /><StatementLine label="Tarifa Oficia estimada · 15%" value={`− ${formatMoney(booking.operations_fee_cents / 100)}`} /><StatementLine label="IVA estimado sobre la comisión · 16%" value={`− ${formatMoney(booking.operations_fee_vat_estimate_cents / 100)}`} /><View style={styles.statementTotal}><Text style={styles.cardTitle}>Referencia del dueño antes de sus impuestos</Text><Text style={styles.amount}>{formatMoney(booking.owner_balance_estimate_cents / 100)}</Text></View>{financialEvents.filter(event => event.booking_id === booking.id).map(event => <StatementLine key={event.id} label={ownerMovementLabel(event.direction)} value={formatMoney(event.amount_cents / 100)} />)}</View>)}</View>; }) : <Empty text="Los tickets de espacios reales aparecerán aquí cuando lleguen solicitudes." />}
         <View style={styles.fiscalNotice}><Text style={styles.cardTitle}>Cotización informativa · sin pago</Text><Text style={styles.small}>La comisión de Oficia se calcula al 15% sobre la renta base, sin sumar impuestos de la renta. El IVA sobre la comisión es una referencia estimada. Los impuestos de la renta y retenciones del anfitrión no están calculados. Oficia no cobra, retiene ni concilia dinero; estos importes no acreditan un pago.</Text></View>
       </>}
       {tab === 'Perfil' && <><Text style={styles.eyebrow}>CUENTA</Text><Text style={styles.title}>Perfil de anfitrión</Text><ProfileEditor name={profileName} avatarUrl={avatarUrl} email={email} accountLabel="Rento espacio · perfil fijo" onSave={onSaveProfile} /><NotificationSettings userId={userId} accountType="anfitrion" requestPermission={onRequestNotifications} />
-        {isOperations ? <Pressable accessibilityRole="button" onPress={onOpenOperations} style={styles.secondary}><Text style={styles.secondaryText}>Abrir Operaciones</Text></Pressable> : null}
+        {isOperations ? <Pressable accessibilityRole="button" accessibilityLabel="Cambiar a Administración" onPress={onOpenOperations} style={styles.secondary}><Text style={styles.secondaryText}>Cambiar a Administración</Text></Pressable> : null}
         <Pressable accessibilityRole="button" onPress={onSignOut} style={styles.secondary}><Text style={styles.secondaryText}>Cerrar sesión</Text></Pressable>
       </>}
     </ScrollView>
@@ -265,6 +267,7 @@ function Stat({ label, value, wide = false }: { label: string; value: string; wi
 function SpaceLine({ name, detail, badge }: { name: string; detail: string; badge: string }) { return <View style={styles.spaceLine}><View style={styles.spaceIcon}><Icon name="briefcase" color={palette.action} size={20} /></View><View style={{ flex: 1 }}><Text style={styles.cardTitle}>{name}</Text><Text style={styles.small}>{detail}</Text></View><Text style={styles.badge}>{badge}</Text></View>; }
 function Empty({ text }: { text: string }) { return <View style={styles.empty}><Icon name="spark" color={palette.action} size={29} /><Text style={styles.emptyText}>{text}</Text></View>; }
 function StatementLine({ label, value }: { label: string; value: string }) { return <View style={styles.statementLine}><Text style={styles.statementLabel}>{label}</Text><Text style={styles.statementValue}>{value}</Text></View>; }
+function ownerMovementLabel(direction: OwnerFinancialEvent['direction']) { return direction === 'cobro_cliente' ? 'Cobro externo registrado' : direction === 'pago_anfitrion' ? 'Pago externo recibido' : 'Reembolso externo registrado'; }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.cream }, scroll: { flex: 1 }, content: { padding: 21, paddingBottom: 42, maxWidth: 760, width: '100%', alignSelf: 'center' },
