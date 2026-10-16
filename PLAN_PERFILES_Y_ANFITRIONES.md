@@ -22,7 +22,7 @@ Si alguien necesita ambas actividades, deberá usar dos cuentas distintas. Un ca
 | --- | --- | --- |
 | Inicio | Buscar, categorías, ofertas, espacios cercanos | Indicadores, espacios propios y solicitudes nuevas |
 | Espacios | Explorar lista/mapa, filtros, fotos y servicios | Crear/editar borradores, enviar a revisión, estado de cada espacio |
-| Solicitudes | Elegir estancia, enviar y consultar ticket informativo | Agenda e historial de solicitudes de espacios propios; Operaciones consulta tickets |
+| Solicitudes | Elegir estancia, enviar y consultar ticket informativo; después de una renta completada, calificar el espacio | Agenda e historial de solicitudes propias; aceptar/rechazar; después de la salida marcar como realizada; Operaciones consulta tickets y modera opiniones |
 | Tickets | No aplica | Desglose estimado de renta, tarifa hipotética de Oficia y referencia para el dueño; excluye muestras |
 | Perfil | Datos de cuenta editables, favoritos, reservas y cierre de sesión | Datos de cuenta editables, tipo de perfil fijo y cierre de sesión; acceso a Operaciones si está autorizado |
 
@@ -30,13 +30,16 @@ Si alguien necesita ambas actividades, deberá usar dos cuentas distintas. Un ca
 
 - Cliente: **Explorar espacios → Ver ficha → Elegir fecha y hora → Enviar solicitud → Ver ticket → Consultar estado**.
 - Dueño: **Agregar espacio → Guardar borrador → Enviar a revisión → Consultar estado**.
-- Operaciones: **Revisar espacio → Validar datos o Devolver con motivo**; consultar tickets y coordinar la disponibilidad sin procesar pagos.
+- Renta y opinión: **Cliente solicita → anfitrión acepta o rechaza → termina el horario → anfitrión marca realizada → cliente califica con estrellas y comentario**. La autorización no depende de depósitos ni modifica campos de pago.
+- Operaciones: **Revisar espacio → Validar datos o Devolver con motivo**; consultar tickets, moderar opiniones y coordinar la disponibilidad sin procesar pagos.
 
 ## Datos, privacidad y desglose informativo
 
 - `oficia_profiles` fija `cliente` o `anfitrion` bajo RLS. El rol no se confía a `user_metadata`, parámetros de URL ni almacenamiento local.
 - `space_drafts` es privado para su dueño y Operaciones. Guardar o validar un borrador **no** lo publica ni habilita rentas.
 - Las solicitudes siguen protegidas por RLS. El dueño solo ve las de sus espacios; el cliente solo ve las propias. Operaciones puede revisarlas por su permiso interno.
+- `space_reviews` solo admite una opinión por reserva real concluida. El servidor valida titular cliente, perfil fijo, autorización, cierre de la renta y que el espacio sea publicado y no de muestra. Cada opinión contiene de 1 a 5 estrellas y un comentario de 3 a 1000 caracteres. RLS limita la lectura pública a opiniones visibles de espacios reales publicados; el promedio se calcula desde las reseñas publicadas. La persona que opina no puede editar después el texto ni las estrellas; Operaciones puede ocultar o volver a publicar una reseña.
+- Los espacios de muestra no admiten rentas autorizadas ni reseñas. Sus ratings previos se pusieron a cero y ya no aparecen como calificaciones en el catálogo.
 - La pantalla de tickets suma solicitudes activas de espacios **reales** del dueño. Separa renta base, tarifa hipotética de Oficia del 15%, IVA estimado sobre esa tarifa y referencia neta antes de impuestos del anfitrión. Son importes de simulación, no ingresos, utilidad ni dinero liquidado.
 - Oficia no recibe, retiene, cobra ni concilia dinero. Se retiraron las instrucciones bancarias de la app y Supabase deniega actualización de pagos y lectura de datos bancarios a clientes y anfitriones.
 - El catálogo actual contiene únicamente cuatro muestras: por eso no hay tickets comerciales reales en el panel.
@@ -53,7 +56,9 @@ Si alguien necesita ambas actividades, deberá usar dos cuentas distintas. Un ca
 | Borradores y revisión | Guardar, editar, enviar, validar o devolver; foto privada en Storage | Probar carga real y coordenadas, documentos y publicación controlada |
 | Publicación de espacios reales | Pendiente | Datos y fotos autorizados; validación de ubicación, disponibilidad y condiciones |
 | Historial de tickets | Desglose estimado por espacio implementado | Verificar con solicitudes reales y dos cuentas; cualquier historial financiero futuro requiere definición legal y fiscal separada |
+| Aceptación y cierre de solicitudes | Implementado; anfitrión u Operaciones acepta/rechaza; el anfitrión marca como realizada solo después de la salida. No afecta pagos. | Validar con una reserva de campo en un espacio real; las muestras quedan excluidas |
+| Calificaciones y opiniones | Implementado: promedio, tres opiniones recientes, estrellas, comentario verificado desde Mis reservas y moderación de Operaciones. Una opinión por reserva. | Verificar con reservas reales y dos cuentas cuando existan inventario y espacios publicados; no cargar reseñas artificiales a producción |
 | Mensajes y avisos | Pendiente | Chat seguro, correos/avisos operativos y trazabilidad |
-| Distribución Android | AAB 1.2.5/código 8 disponible en prueba interna; PWA comparte el mismo código | Probar el nuevo AAB en teléfono; producción pendiente de requisitos de Play |
+| Distribución Android | AAB 1.2.6/código 9 en preparación; PWA comparte el mismo código | Probar el nuevo AAB en teléfono; producción pendiente de requisitos de Play |
 
 **Criterio de salida para el flujo de dueño:** un anfitrión nuevo puede iniciar con correo o Google, crear un borrador, enviarlo a Operaciones, recibir decisión y consultar sus propias solicitudes y tickets informativos; un cliente no puede ver ni modificar esos datos. La publicación comercial exige inventario, ubicación y disponibilidad verificados. Cualquier flujo futuro de dinero requiere una decisión independiente.

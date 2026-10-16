@@ -12,7 +12,7 @@ import { ProfileEditor } from './ProfileEditor';
 type OwnerTab = 'Inicio' | 'Espacios' | 'Solicitudes' | 'Tickets' | 'Perfil';
 type OwnedSpace = { id: string; name: string; area: string; is_demo: boolean; is_published: boolean; rate_hour_cents: number };
 type Closure = { space_id: string; closed_on: string };
-type OwnerBooking = { id: string; space_id: string; local_date: string; local_time: string; quantity: number; unit: string; total_cents: number; operations_fee_cents: number; operations_fee_vat_estimate_cents: number; owner_balance_estimate_cents: number; status: string; payment_status: string; created_at: string };
+type OwnerBooking = { id: string; space_id: string; local_date: string; local_time: string; starts_at: string; ends_at: string; completed_at: string | null; quantity: number; unit: string; total_cents: number; operations_fee_cents: number; operations_fee_vat_estimate_cents: number; owner_balance_estimate_cents: number; status: string; payment_status: string; created_at: string };
 type Draft = { id: string; name: string; area: string; city: string; address: string; latitude: number | null; longitude: number | null; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: number; description: string; privacy: string; amenities: string[]; image_url: string; rate_hour_cents: number; rate_day_cents: number; rate_week_cents: number; status: string; rejection_reason: string | null };
 type DraftForm = { id?: string; name: string; area: string; city: string; address: string; latitude: string; longitude: string; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: string; description: string; privacy: string; amenities: string[]; image_url: string; hour: string; day: string; week: string };
 
@@ -45,7 +45,7 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
     const [owned, draftsResult, requests] = await Promise.all([
       supabase.from('spaces').select('id,name,area,is_demo,is_published,rate_hour_cents').eq('host_id', userId),
       supabase.from('space_drafts').select('*').eq('owner_id', userId).order('created_at', { ascending: false }),
-      supabase.from('bookings').select('id,space_id,local_date,local_time,quantity,unit,total_cents,operations_fee_cents,operations_fee_vat_estimate_cents,owner_balance_estimate_cents,status,payment_status,created_at').order('created_at', { ascending: false }),
+      supabase.from('bookings').select('id,space_id,local_date,local_time,starts_at,ends_at,completed_at,quantity,unit,total_cents,operations_fee_cents,operations_fee_vat_estimate_cents,owner_balance_estimate_cents,status,payment_status,created_at').order('created_at', { ascending: false }),
     ]);
     if (owned.error || draftsResult.error || requests.error) throw owned.error ?? draftsResult.error ?? requests.error;
     const ownedSpaces = (owned.data ?? []) as OwnedSpace[];
@@ -88,6 +88,24 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
     else {
       setNotice(isClosed ? 'Fecha disponible de nuevo.' : 'Fecha bloqueada.');
       await refresh().catch(() => setNotice('Fecha guardada. Actualiza el panel para verla.'));
+    }
+    setBusy(false);
+  };
+  const updateBooking = async (booking: OwnerBooking, action: 'confirmar' | 'rechazar' | 'finalizar') => {
+    if (!supabase || busy) return;
+    setBusy(true); setNotice('');
+    const values = action === 'confirmar'
+      ? { status: 'confirmada', rejection_reason: null }
+      : action === 'rechazar'
+        ? { status: 'rechazada', rejection_reason: 'No disponible para ese horario.' }
+        : { completed_at: new Date().toISOString() };
+    const { error } = await supabase.from('bookings').update(values).eq('id', booking.id);
+    if (error) setNotice(action === 'finalizar'
+      ? 'No se pudo marcar como realizada. Actualiza la solicitud e inténtalo de nuevo.'
+      : 'No se pudo actualizar la solicitud. Actualiza e inténtalo de nuevo.');
+    else {
+      setNotice(action === 'confirmar' ? 'Solicitud aceptada. El cliente podrá ver la autorización.' : action === 'rechazar' ? 'Solicitud rechazada.' : 'Renta finalizada. El cliente ya puede dejar su opinión.');
+      await refresh().catch(() => setNotice('La solicitud se guardó. Actualiza el panel para ver el cambio.'));
     }
     setBusy(false);
   };
@@ -207,7 +225,19 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
         </>}
       </>}
       {tab === 'Solicitudes' && !loadError && <><Text style={styles.eyebrow}>AGENDA</Text><Text style={styles.title}>Solicitudes e historial</Text>
-        {bookings.length ? bookings.map(booking => <View key={booking.id} style={styles.booking}><View style={styles.line}><Text style={styles.cardTitle}>{spaceName(booking.space_id)}</Text><Text style={styles.badge}>{booking.status === 'confirmada' ? 'Autorizada' : booking.status === 'rechazada' ? 'Rechazada' : 'Pendiente'}</Text></View><Text style={styles.small}>{formatDate(booking.local_date)} · {booking.local_time.slice(0, 5)} · {booking.quantity} {booking.unit.toLowerCase()}</Text><Text style={styles.amount}>{formatMoney(booking.total_cents / 100)}</Text><Text style={styles.small}>Ticket informativo · sin cobro</Text></View>) : <Empty text="Las solicitudes para tus espacios aparecerán aquí." />}
+        {bookings.length ? bookings.map(booking => {
+          const space = spaces.find(item => item.id === booking.space_id);
+          const sample = space?.is_demo ?? true;
+          const canComplete = booking.status === 'confirmada' && !booking.completed_at && new Date(booking.ends_at).getTime() <= Date.now();
+          return <View key={booking.id} style={styles.booking}>
+            <View style={styles.line}><Text style={styles.cardTitle}>{spaceName(booking.space_id)}</Text><Text style={styles.badge}>{booking.completed_at ? 'Realizada' : booking.status === 'confirmada' ? 'Autorizada' : booking.status === 'rechazada' ? 'Rechazada' : 'Pendiente'}</Text></View>
+            <Text style={styles.small}>{formatDate(booking.local_date)} · {booking.local_time.slice(0, 5)} · {booking.quantity} {booking.unit.toLowerCase()}</Text>
+            <Text style={styles.amount}>{formatMoney(booking.total_cents / 100)}</Text><Text style={styles.small}>Ticket informativo · sin cobro</Text>
+            {!sample && booking.status === 'pendiente' ? <View style={styles.bookingActions}><Pressable accessibilityRole="button" disabled={busy} onPress={() => void updateBooking(booking, 'confirmar')} style={styles.action}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Aceptar solicitud'}</Text></Pressable><Pressable accessibilityRole="button" disabled={busy} onPress={() => void updateBooking(booking, 'rechazar')} style={styles.secondary}><Text style={styles.secondaryText}>Rechazar</Text></Pressable></View> : null}
+            {!sample && canComplete ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => void updateBooking(booking, 'finalizar')} style={styles.action}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Marcar como realizada'}</Text></Pressable> : null}
+            {!sample && booking.completed_at ? <Text style={styles.reviewHint}>El cliente ya puede calificar esta renta.</Text> : null}
+          </View>;
+        }) : <Empty text="Las solicitudes para tus espacios aparecerán aquí." />}
         <Text style={styles.small}>Cada solicitud genera un ticket estimado. No se procesa dinero en Oficia.</Text>
       </>}
       {tab === 'Tickets' && !loadError && <><Text style={styles.eyebrow}>DESGLOSE</Text><Text style={styles.title}>Tickets por espacio</Text><View style={styles.incomeHero}><Text style={styles.incomeLabel}>Importe de solicitudes activas</Text><Text style={styles.incomeValue}>{formatMoney(gross)}</Text><Text style={styles.incomeHint}>Referencia informativa; no representa ingresos cobrados.</Text></View>
@@ -243,6 +273,7 @@ const styles = StyleSheet.create({
   spaceCard: { marginBottom: 10 }, spaceLine: { backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line, borderRadius: 17, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 10 }, spaceIcon: { width: 40, height: 40, backgroundColor: palette.blush, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { color: palette.plum, fontSize: 14, fontWeight: '800' }, small: { color: palette.muted, fontSize: 11, lineHeight: 16, marginTop: 5 }, badge: { color: palette.action, backgroundColor: palette.blush, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, fontSize: 10, fontWeight: '700', overflow: 'hidden' },
   booking: { backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line, borderRadius: 17, padding: 17, marginBottom: 11 }, line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }, amount: { color: palette.action, fontSize: 14, fontWeight: '800', marginTop: 9 },
+  bookingActions: { gap: 4 }, reviewHint: { color: palette.action, fontSize: 11, fontWeight: '700', marginTop: 13 },
   empty: { backgroundColor: palette.white, borderRadius: 18, padding: 28, alignItems: 'center', gap: 10, borderWidth: 1, borderColor: palette.line }, emptyText: { color: palette.muted, fontSize: 13, textAlign: 'center', lineHeight: 19 },
   incomeHero: { backgroundColor: palette.plum, borderRadius: 21, padding: 23, marginBottom: 21 }, incomeLabel: { color: palette.blush, fontSize: 12, fontWeight: '700' }, incomeValue: { color: palette.white, fontSize: 33, fontWeight: '900', marginTop: 9 }, incomeHint: { color: palette.blush, fontSize: 11, marginTop: 8 },
   statement: { backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line, borderRadius: 17, padding: 16, marginBottom: 11, marginLeft: 12 }, statementLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, paddingTop: 10 }, statementLabel: { flex: 1, color: palette.muted, fontSize: 11 }, statementValue: { color: palette.plum, fontSize: 11, fontWeight: '700' }, statementTotal: { borderTopWidth: 1, borderColor: palette.line, marginTop: 12, paddingTop: 12, gap: 4 }, fiscalNotice: { backgroundColor: palette.blush, borderRadius: 15, padding: 15, marginTop: 7 },

@@ -48,13 +48,14 @@ export type Booking = {
   transferReference?: string;
   payerReference?: string | null;
   paymentStatus?: TransferStatus;
+  completedAt?: string | null;
 };
 
 // Datos de demostración: sustituir por inventario, precios y fotos autorizados.
 export const spaces: Space[] = [
   {
     id: 'sala-norte', name: 'Sala Norte', area: 'Centro, Delicias', category: 'Sala de juntas', capacity: 8,
-    rate: { Hora: 280, Día: 1750, Semana: 7750 }, rating: '4.9', reviewCount: 38,
+    rate: { Hora: 280, Día: 1750, Semana: 7750 }, rating: 'Nuevo', reviewCount: 0,
     image: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=1100&q=85',
     gallery: [
       'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=1100&q=85',
@@ -67,7 +68,7 @@ export const spaces: Space[] = [
   },
   {
     id: 'oficina-olivo', name: 'Oficina Olivo', area: 'Sector Oriente, Delicias', category: 'Oficina privada', capacity: 4,
-    rate: { Hora: 190, Día: 1190, Semana: 5350 }, rating: '4.8', reviewCount: 27,
+    rate: { Hora: 190, Día: 1190, Semana: 5350 }, rating: 'Nuevo', reviewCount: 0,
     image: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1100&q=85',
     gallery: [
       'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1100&q=85',
@@ -79,7 +80,7 @@ export const spaces: Space[] = [
   },
   {
     id: 'mesa-colectiva', name: 'Mesa Colectiva', area: 'Centro, Delicias', category: 'Coworking', capacity: 1,
-    rate: { Hora: 85, Día: 490, Semana: 2190 }, rating: '4.9', reviewCount: 46,
+    rate: { Hora: 85, Día: 490, Semana: 2190 }, rating: 'Nuevo', reviewCount: 0,
     image: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1100&q=85',
     gallery: [
       'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1100&q=85',
@@ -91,7 +92,7 @@ export const spaces: Space[] = [
   },
   {
     id: 'estudio-alamo', name: 'Estudio Álamo', area: 'Meoqui, Chihuahua', category: 'Oficina privada', capacity: 3,
-    rate: { Hora: 220, Día: 1390, Semana: 6200 }, rating: '4.7', reviewCount: 19,
+    rate: { Hora: 220, Día: 1390, Semana: 6200 }, rating: 'Nuevo', reviewCount: 0,
     image: 'https://images.unsplash.com/photo-1497366858526-0766cadbe8fa?w=1100&q=85',
     gallery: [
       'https://images.unsplash.com/photo-1497366858526-0766cadbe8fa?w=1100&q=85',
