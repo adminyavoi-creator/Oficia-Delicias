@@ -502,11 +502,21 @@ function AppContent() {
     if (authPassword !== authPasswordConfirm) { setAuthNotice('Las contraseñas no coinciden.'); return; }
     setAuthBusy(true); setAuthNotice('');
     try {
-      const { error } = await supabase.auth.updateUser({ password: authPassword });
+      const { data, error } = await supabase.auth.updateUser({ password: authPassword });
       if (error) throw error;
       passwordRecoveryFlow.current = false;
       setAuthPassword(''); setAuthPasswordConfirm(''); setAuthMode('entrar');
-      setAuthNotice('Contraseña actualizada. Ya puedes iniciar sesión.');
+      setAuthNotice('Contraseña actualizada.');
+      if (data.user) {
+        setUser(data.user);
+        try {
+          await resolveProfile(data.user);
+          showMessage('Contraseña actualizada', 'Tu cuenta ya está lista para continuar.');
+        } catch {
+          setScreen('chooseRole');
+          showMessage('Contraseña actualizada', 'Tu cuenta está protegida. Toca Continuar para abrir tu perfil.');
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message.toLowerCase() : '';
       setAuthNotice(message.includes('same_password') || message.includes('different from the old')
