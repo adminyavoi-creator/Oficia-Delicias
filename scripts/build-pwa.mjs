@@ -25,7 +25,7 @@ for (const path of files) {
   revisionHash.update(path).update(await readFile(join(directory, relativePath)));
 }
 const revision = revisionHash.digest('hex').slice(0, 12);
-await writeFile(join(directory, 'build-info.json'), JSON.stringify({ frontendRevision: revision }) + '\\n');
+await writeFile(join(directory, 'build-info.json'), JSON.stringify({ frontendRevision: revision }) + '\n');
 files.push('/build-info.json');
 const swPath = join(directory, 'sw.js');
 const sw = await readFile(swPath, 'utf8');
