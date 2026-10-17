@@ -32,8 +32,9 @@ export function BookingWorkflowModal({ visible, bookingId, userId, mode, onClose
 
   const refresh = useCallback(async () => {
     if (!supabase) return;
+    const client = supabase;
     setLoading(true);
-    const bookingResult = await supabase.from('bookings')
+    const bookingResult = await client.from('bookings')
       .select('id,client_id,space_id,local_date,local_time,unit,quantity,total_cents,transfer_reference,status,payment_status,payment_review_note,agreement_closed_at,spaces!inner(name,area,host_id,is_demo)')
       .eq('id', bookingId).maybeSingle();
     if (bookingResult.error || !bookingResult.data) {
@@ -43,30 +44,30 @@ export function BookingWorkflowModal({ visible, bookingId, userId, mode, onClose
     }
     const row = bookingResult.data as unknown as BookingRow;
     setBooking(row);
-    const messageResult = await supabase.from('booking_messages')
+    const messageResult = await client.from('booking_messages')
       .select('id,sender_id,body,created_at').eq('booking_id', bookingId)
       .order('created_at', { ascending: true }).limit(200);
     if (!messageResult.error) setMessages((messageResult.data ?? []) as Message[]);
     if (mode === 'operations') {
       const [contactResult, proofResult] = await Promise.all([
-        supabase.rpc('booking_customer_contact', { p_booking_id: bookingId }),
-        supabase.from('booking_payment_proofs').select('id,object_path,file_name,mime_type,size_bytes,created_at')
+        client.rpc('booking_customer_contact', { p_booking_id: bookingId }),
+        client.from('booking_payment_proofs').select('id,object_path,file_name,mime_type,size_bytes,created_at')
           .eq('booking_id', bookingId).order('created_at', { ascending: false }).limit(10),
       ]);
       const contactRow = Array.isArray(contactResult.data) ? contactResult.data[0] : contactResult.data;
       if (!contactResult.error && contactRow) setContact(contactRow as Contact);
       if (!proofResult.error) {
         const signed = await Promise.all((proofResult.data ?? []).map(async proof => {
-          const result = await supabase.storage.from('oficia-booking-proofs').createSignedUrl(proof.object_path, 300);
+          const result = await client.storage.from('oficia-booking-proofs').createSignedUrl(proof.object_path, 300);
           return { ...proof, url: result.data?.signedUrl } as Proof;
         }));
         setProofs(signed);
       }
     } else if (row.status === 'pendiente' || row.status === 'aceptada_anfitrion') {
-      const result = await supabase.rpc('booking_payment_instructions', { p_booking_id: bookingId });
+      const result = await client.rpc('booking_payment_instructions', { p_booking_id: bookingId });
       if (!result.error && result.data?.length) setInstructions(result.data[0] as Instructions);
       else setInstructions(null);
-      const proofResult = await supabase.from('booking_payment_proofs').select('id,object_path,file_name,mime_type,size_bytes,created_at')
+      const proofResult = await client.from('booking_payment_proofs').select('id,object_path,file_name,mime_type,size_bytes,created_at')
         .eq('booking_id', bookingId).order('created_at', { ascending: false }).limit(10);
       if (!proofResult.error) setProofs((proofResult.data ?? []) as Proof[]);
     } else setInstructions(null);
@@ -250,7 +251,7 @@ export function BookingWorkflowModal({ visible, bookingId, userId, mode, onClose
           <ScrollView nestedScrollEnabled style={styles.messages} contentContainerStyle={styles.messageList}>
             {messages.length ? messages.map(message => <View key={message.id} style={[styles.bubble, message.sender_id === userId ? styles.mine : styles.theirs]}><Text style={[styles.messageText, message.sender_id === userId && styles.mineText]}>{message.body}</Text><Text style={[styles.time, message.sender_id === userId && styles.mineText]}>{new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit' }).format(new Date(message.created_at))}</Text></View>) : <Text style={styles.meta}>Aún no hay mensajes.</Text>}
           </ScrollView>
-          {(booking.status === 'pendiente' || booking.status === 'aceptada_anfitrion') ? <View style={styles.composer}><TextInput accessibilityLabel="Mensaje" value={draft} onChangeText={setDraft} placeholder="Escribe un mensaje" placeholderTextColor={palette.muted} maxLength={2000} multiline style={styles.input} /><Pressable accessibilityRole="button" accessibilityLabel="Enviar mensaje" disabled={busy || !draft.trim()} onPress={() => void sendMessage()} style={[styles.send, (busy || !draft.trim()) && styles.disabled]}><Icon name="arrow" size={18} color={palette.white} /></Pressable></View> : <Text style={styles.helper}>La conversación con Operaciones se cerró al autorizar la renta.</Text>}
+          {(booking.status === 'pendiente' || booking.status === 'aceptada_anfitrion') ? <View style={styles.composer}><TextInput accessibilityLabel="Mensaje" value={draft} onChangeText={setDraft} placeholder="Escribe un mensaje" placeholderTextColor={palette.muted} maxLength={2000} multiline style={styles.chatInput} /><Pressable accessibilityRole="button" accessibilityLabel="Enviar mensaje" disabled={busy || !draft.trim()} onPress={() => void sendMessage()} style={[styles.send, (busy || !draft.trim()) && styles.disabled]}><Icon name="arrow" size={18} color={palette.white} /></Pressable></View> : <Text style={styles.helper}>La conversación con Operaciones se cerró al autorizar la renta.</Text>}
         </View>
         {notice ? <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text> : null}
       </ScrollView> : <View style={styles.loading}><Text style={styles.meta}>No encontramos esta solicitud.</Text></View>}
@@ -293,6 +294,6 @@ const styles = StyleSheet.create({
   messages: { maxHeight: 210, minHeight: 58, marginTop: 6 }, messageList: { gap: 8 },
   bubble: { maxWidth: '88%', paddingHorizontal: 11, paddingVertical: 8, borderRadius: 13 }, mine: { alignSelf: 'flex-end', backgroundColor: palette.action }, theirs: { alignSelf: 'flex-start', backgroundColor: palette.cream, borderWidth: 1, borderColor: palette.line },
   messageText: { color: palette.plum, fontSize: 12, lineHeight: 17 }, mineText: { color: palette.white }, time: { alignSelf: 'flex-end', color: palette.muted, fontSize: 9, marginTop: 3 },
-  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 10 }, input: { flex: 1, minHeight: 42, maxHeight: 90, borderRadius: 13, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.cream, color: palette.plum, paddingHorizontal: 11, paddingVertical: 9, fontSize: 13 },
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 10 }, chatInput: { flex: 1, minHeight: 42, maxHeight: 90, borderRadius: 13, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.cream, color: palette.plum, paddingHorizontal: 11, paddingVertical: 9, fontSize: 13 },
   send: { width: 42, height: 42, borderRadius: 14, backgroundColor: palette.action, alignItems: 'center', justifyContent: 'center' }, notice: { color: palette.action, fontSize: 12, lineHeight: 18, fontWeight: '700', paddingHorizontal: 4 },
 });
