@@ -137,7 +137,7 @@ function AppContent() {
     const ownHostIds = (hostResult.data ?? []).map(row => row.id as string);
     const operator = operatorResult.data === true;
     if (operator) {
-      const result = await supabase.from('space_drafts').select('id,name,area,city,address,latitude,longitude,open_days,opens_at,closes_at,category,capacity,amenities,privacy,image_url,photo_path,rate_hour_cents,rate_day_cents,rate_week_cents,description').eq('status', 'en_revision').order('created_at', { ascending: true });
+      const result = await supabase.from('space_drafts').select('id,name,area,city,address,latitude,longitude,open_days,opens_at,closes_at,category,capacity,amenities,privacy,image_url,photo_path,photo_paths,rate_hour_cents,rate_day_cents,rate_week_cents,description').eq('status', 'en_revision').order('created_at', { ascending: true });
       if (result.error) throw result.error;
       setReviewDrafts((result.data ?? []) as ReviewDraft[]);
     } else setReviewDrafts([]);
@@ -402,23 +402,29 @@ function AppContent() {
   const reviewSpaceDraft = async (id: string, approve: boolean, reason: string) => {
     if (!supabase || !isOperations) return;
     setOperationsBusy(true); setOperationsNotice('');
-    let publicPhotoPath: string | null = null;
+    const publicPhotoPaths: string[] = [];
     try {
       if (approve) {
         const draft = reviewDrafts.find(item => item.id === id);
         if (!draft) throw new Error('Ficha no disponible');
-        let imageUrl = draft.image_url.trim();
-        if (draft.photo_path) {
-          const { data: photo, error: downloadError } = await supabase.storage.from('oficia-space-drafts').download(draft.photo_path);
+        const privatePhotoPaths = draft.photo_paths?.length ? draft.photo_paths : draft.photo_path ? [draft.photo_path] : [];
+        if (privatePhotoPaths.length > 10) throw new Error('La ficha excede el límite de fotos');
+        const galleryUrls: string[] = [];
+        for (const privatePath of privatePhotoPaths) {
+          const { data: photo, error: downloadError } = await supabase.storage.from('oficia-space-drafts').download(privatePath);
           if (downloadError || !photo) throw downloadError ?? new Error('Foto no disponible');
-          const extension = draft.photo_path.split('.').pop()?.toLowerCase();
+          const extension = privatePath.split('.').pop()?.toLowerCase();
           if (!extension || !['jpg', 'jpeg', 'png', 'webp'].includes(extension)) throw new Error('Formato de foto inválido');
-          publicPhotoPath = `${id}/${crypto.randomUUID()}.${extension}`;
-          const { error: uploadError } = await supabase.storage.from('oficia-space-media').upload(publicPhotoPath, photo, { contentType: photo.type || 'image/jpeg', upsert: false });
+          const publicPath = `${id}/${crypto.randomUUID()}.${extension}`;
+          const contentType = extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
+          const { error: uploadError } = await supabase.storage.from('oficia-space-media').upload(publicPath, photo, { contentType: photo.type || contentType, upsert: false });
           if (uploadError) throw uploadError;
-          imageUrl = supabase.storage.from('oficia-space-media').getPublicUrl(publicPhotoPath).data.publicUrl;
+          publicPhotoPaths.push(publicPath);
+          galleryUrls.push(supabase.storage.from('oficia-space-media').getPublicUrl(publicPath).data.publicUrl);
         }
-        const { error } = await supabase.rpc('publish_space_draft', { p_draft_id: id, p_image_url: imageUrl });
+        if (!galleryUrls.length && draft.image_url.trim()) galleryUrls.push(draft.image_url.trim());
+        const imageUrl = galleryUrls[0] ?? '';
+        const { error } = await supabase.rpc('publish_space_draft', { p_draft_id: id, p_image_url: imageUrl, p_gallery_urls: galleryUrls });
         if (error) throw error;
       } else {
         const { error } = await supabase.from('space_drafts').update({ status: 'rechazado', rejection_reason: reason.trim() }).eq('id', id).eq('status', 'en_revision');
@@ -427,9 +433,9 @@ function AppContent() {
       setReviewDrafts(current => current.filter(item => item.id !== id));
       setOperationsNotice(approve ? 'Espacio publicado y visible para clientes.' : 'Ficha devuelta al dueño con observaciones.');
     } catch {
-      if (publicPhotoPath) {
+      if (publicPhotoPaths.length) {
         const { data: published, error: lookupError } = await supabase.from('spaces').select('id').eq('id', id).eq('is_demo', false).maybeSingle();
-        if (!lookupError && !published) await supabase.storage.from('oficia-space-media').remove([publicPhotoPath]).catch(() => {});
+        if (!lookupError && !published) await supabase.storage.from('oficia-space-media').remove(publicPhotoPaths).catch(() => {});
       }
       setOperationsNotice(approve ? 'No se pudo publicar. Revisa la ficha y vuelve a intentar.' : 'No se pudo devolver la ficha. Actualiza e inténtalo de nuevo.');
     } finally { setOperationsBusy(false); }

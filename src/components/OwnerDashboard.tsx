@@ -17,18 +17,24 @@ type OwnedSpace = { id: string; name: string; area: string; is_demo: boolean; is
 type Closure = { space_id: string; closed_on: string };
 type OwnerBooking = { id: string; space_id: string; local_date: string; local_time: string; starts_at: string; ends_at: string; completed_at: string | null; quantity: number; unit: string; total_cents: number; operations_fee_cents: number; operations_fee_vat_estimate_cents: number; owner_balance_estimate_cents: number; status: string; payment_status: string; created_at: string };
 type OwnerFinancialEvent = { id: string; booking_id: string; direction: 'cobro_cliente' | 'pago_anfitrion' | 'reembolso_cliente'; amount_cents: number; event_date: string };
-type Draft = { id: string; name: string; area: string; city: string; address: string; latitude: number | null; longitude: number | null; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: number; description: string; privacy: string; amenities: string[]; image_url: string; rate_hour_cents: number; rate_day_cents: number; rate_week_cents: number; status: string; rejection_reason: string | null };
-type DraftForm = { id?: string; name: string; area: string; city: string; address: string; latitude: string; longitude: string; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; category: string; capacity: string; description: string; privacy: string; amenities: string[]; image_url: string; hour: string; day: string; week: string };
+type Draft = { id: string; name: string; area: string; city: string; address: string; latitude: number | null; longitude: number | null; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; photo_paths: string[]; category: string; capacity: number; description: string; privacy: string; amenities: string[]; image_url: string; rate_hour_cents: number; rate_day_cents: number; rate_week_cents: number; status: string; rejection_reason: string | null };
+type DraftForm = { id?: string; name: string; area: string; city: string; address: string; latitude: string; longitude: string; open_days: number[]; opens_at: string; closes_at: string; photo_path: string | null; photo_paths: string[]; category: string; capacity: string; description: string; privacy: string; amenities: string[]; image_url: string; hour: string; day: string; week: string };
 
 const amenityOptions = ['Internet rápido', 'Pantalla', 'Proyector', 'Pizarrón', 'Videollamadas', 'Monitor', 'Café', 'Climatización', 'Enchufes', 'Accesibilidad'];
-const blankDraft: DraftForm = { name: '', area: '', city: 'Delicias', address: '', latitude: '', longitude: '', open_days: [1, 2, 3, 4, 5], opens_at: '08:00', closes_at: '18:00', photo_path: null, category: 'Oficina privada', capacity: '1', description: '', privacy: '', amenities: [], image_url: '', hour: '', day: '', week: '' };
+const MAX_SPACE_PHOTOS = 10;
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const allowedPhotoTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const blankDraft: DraftForm = { name: '', area: '', city: 'Delicias', address: '', latitude: '', longitude: '', open_days: [1, 2, 3, 4, 5], opens_at: '08:00', closes_at: '18:00', photo_path: null, photo_paths: [], category: 'Oficina privada', capacity: '1', description: '', privacy: '', amenities: [], image_url: '', hour: '', day: '', week: '' };
 const weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const tabs: { label: OwnerTab; icon: IconName }[] = [
   { label: 'Inicio', icon: 'home' }, { label: 'Espacios', icon: 'briefcase' }, { label: 'Solicitudes', icon: 'calendar' }, { label: 'Tickets', icon: 'ticket' }, { label: 'Perfil', icon: 'user' },
 ];
 const toMoney = (value: string) => Math.round(Number(value) * 100);
 const toCoordinate = (value: string) => value.trim() && Number.isFinite(Number(value)) ? Number(value) : null;
-const formFromDraft = (draft: Draft): DraftForm => ({ id: draft.id, name: draft.name, area: draft.area, city: draft.city, address: draft.address, latitude: draft.latitude == null ? '' : String(draft.latitude), longitude: draft.longitude == null ? '' : String(draft.longitude), open_days: draft.open_days, opens_at: draft.opens_at.slice(0, 5), closes_at: draft.closes_at.slice(0, 5), photo_path: draft.photo_path, category: draft.category, capacity: String(draft.capacity), description: draft.description, privacy: draft.privacy, amenities: draft.amenities ?? [], image_url: draft.image_url, hour: String(draft.rate_hour_cents / 100), day: String(draft.rate_day_cents / 100), week: String(draft.rate_week_cents / 100) });
+const formFromDraft = (draft: Draft): DraftForm => {
+  const photoPaths = draft.photo_paths?.length ? draft.photo_paths : draft.photo_path ? [draft.photo_path] : [];
+  return { id: draft.id, name: draft.name, area: draft.area, city: draft.city, address: draft.address, latitude: draft.latitude == null ? '' : String(draft.latitude), longitude: draft.longitude == null ? '' : String(draft.longitude), open_days: draft.open_days, opens_at: draft.opens_at.slice(0, 5), closes_at: draft.closes_at.slice(0, 5), photo_path: photoPaths[0] ?? null, photo_paths: photoPaths, category: draft.category, capacity: String(draft.capacity), description: draft.description, privacy: draft.privacy, amenities: draft.amenities ?? [], image_url: draft.image_url, hour: String(draft.rate_hour_cents / 100), day: String(draft.rate_day_cents / 100), week: String(draft.rate_week_cents / 100) };
+};
 
 export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSaveProfile, isOperations, onOpenOperations, onSignOut, onRequestNotifications, focusBookingId }: {
   userId: string; email: string; profileName: string; avatarUrl: string; onSaveProfile: (name: string, avatarUrl: string) => Promise<void>; isOperations: boolean; onOpenOperations: () => void; onSignOut: () => void; onRequestNotifications: () => Promise<boolean>; focusBookingId: string | null;
@@ -47,7 +53,21 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [loadError, setLoadError] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [photoUploadProgress, setPhotoUploadProgress] = useState<{ completed: number; total: number } | null>(null);
+  const photoPathsKey = editing?.photo_paths.join('|') ?? '';
+
+  useEffect(() => {
+    let active = true;
+    const paths = editing?.photo_paths ?? [];
+    if (!supabase || paths.length === 0) { setPhotoPreviews([]); return; }
+    const draftStorage = supabase.storage.from('oficia-space-drafts');
+    Promise.all(paths.map(async path => {
+      const { data } = await draftStorage.createSignedUrl(path, 3600);
+      return data?.signedUrl ?? '';
+    })).then(urls => { if (active) setPhotoPreviews(urls.filter(Boolean)); });
+    return () => { active = false; };
+  }, [editing?.id, photoPathsKey]);
 
   const refresh = useCallback(async () => {
     if (!supabase) return;
@@ -98,9 +118,8 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
   const updateForm = (key: keyof DraftForm, value: string) => setEditing(current => current ? { ...current, [key]: value } : current);
   const toggleAmenity = (value: string) => setEditing(current => current ? { ...current, amenities: current.amenities.includes(value) ? current.amenities.filter(item => item !== value) : [...current.amenities, value] } : current);
   const openDraft = (draft: Draft) => {
-    setEditing(formFromDraft(draft)); setPhotoPreview(null);
-    if (draft.photo_path && supabase) supabase.storage.from('oficia-space-drafts').createSignedUrl(draft.photo_path, 3600)
-      .then(({ data }) => setPhotoPreview(data?.signedUrl ?? null));
+    setPhotoPreviews([]);
+    setEditing(formFromDraft(draft));
   };
   const toggleClosure = async (spaceId: string, date: string, isClosed: boolean) => {
     if (!supabase || busy) return;
@@ -143,28 +162,51 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
     setBusy(false);
   };
   const choosePhoto = () => {
-    if (!editing?.id || !supabase || busy) { setNotice('Guarda el borrador antes de subir una foto.'); return; }
+    if (!editing || !supabase || busy) return;
     const input = document.createElement('input');
-    input.type = 'file'; input.accept = 'image/jpeg,image/png,image/webp';
+    input.type = 'file'; input.accept = 'image/jpeg,image/png,image/webp'; input.multiple = true;
     input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file || !supabase || !editing?.id) return;
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) { setNotice('Usa JPG, PNG o WebP de hasta 5 MB.'); return; }
+      const files = Array.from(input.files ?? []);
+      if (!files.length || !supabase || !editing) return;
+      const existingPaths = editing.photo_paths.length ? editing.photo_paths : editing.photo_path ? [editing.photo_path] : [];
+      if (existingPaths.length + files.length > MAX_SPACE_PHOTOS) { setNotice(`Puedes agregar hasta ${MAX_SPACE_PHOTOS} fotos por espacio.`); return; }
+      const invalidFile = files.find(file => !allowedPhotoTypes.includes(file.type) || file.size > MAX_PHOTO_BYTES);
+      if (invalidFile) { setNotice('Cada foto debe ser JPG, PNG o WebP y pesar hasta 5 MB.'); return; }
+      const draftId = editing.id;
       setBusy(true); setNotice('');
-      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
-      const path = `${userId}/${editing.id}/${crypto.randomUUID()}.${ext}`;
+      setPhotoUploadProgress({ completed: 0, total: files.length });
+      const uploadedPaths: string[] = [];
+      let linkedToDraft = false;
       try {
-        const upload = await supabase.storage.from('oficia-space-drafts').upload(path, file, { contentType: file.type, upsert: false });
-        if (upload.error) throw upload.error;
-        const saved = await supabase.from('space_drafts').update({ photo_path: path }).eq('id', editing.id).eq('owner_id', userId).select('id').single();
-        if (saved.error) { await supabase.storage.from('oficia-space-drafts').remove([path]); throw saved.error; }
-        const signed = await supabase.storage.from('oficia-space-drafts').createSignedUrl(path, 3600);
-        setPhotoPreview(signed.data?.signedUrl ?? null);
-        setEditing(current => current ? { ...current, photo_path: path } : current);
-        setNotice('Foto guardada en privado.');
-        await refresh();
-      } catch { setNotice('No se pudo subir la foto. Inténtalo de nuevo.'); }
-      finally { setBusy(false); }
+        let savedDraftId = draftId;
+        if (!savedDraftId) {
+          const created = await supabase.from('space_drafts').insert({ owner_id: userId }).select('id').single();
+          if (created.error) throw created.error;
+          savedDraftId = created.data.id;
+          const createdDraftId = created.data.id;
+          setEditing(current => current && !current.id ? { ...current, id: createdDraftId } : current);
+        }
+        const resolvedDraftId = savedDraftId;
+        if (!resolvedDraftId) throw new Error('No se pudo crear el borrador');
+        for (const [index, file] of files.entries()) {
+          const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+          const path = `${userId}/${resolvedDraftId}/${crypto.randomUUID()}.${ext}`;
+          const upload = await supabase.storage.from('oficia-space-drafts').upload(path, file, { contentType: file.type, upsert: false });
+          if (upload.error) throw upload.error;
+          uploadedPaths.push(path);
+          setPhotoUploadProgress({ completed: index + 1, total: files.length });
+        }
+        const nextPaths = [...existingPaths, ...uploadedPaths];
+        const saved = await supabase.from('space_drafts').update({ photo_paths: nextPaths, photo_path: nextPaths[0] ?? null, image_url: '' }).eq('id', resolvedDraftId).eq('owner_id', userId).select('id').single();
+        if (saved.error) throw saved.error;
+        linkedToDraft = true;
+        setEditing(current => current && current.id === resolvedDraftId ? { ...current, photo_paths: nextPaths, photo_path: nextPaths[0] ?? null, image_url: '' } : current);
+        setNotice(`${files.length} ${files.length === 1 ? 'foto guardada' : 'fotos guardadas'} en privado.`);
+        await refresh().catch(() => {});
+      } catch {
+        if (uploadedPaths.length && !linkedToDraft) await supabase.storage.from('oficia-space-drafts').remove(uploadedPaths).catch(() => {});
+        setNotice('No se pudieron guardar todas las fotos. Inténtalo de nuevo.');
+      } finally { setBusy(false); setPhotoUploadProgress(null); }
     };
     input.click();
   };
@@ -181,12 +223,12 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
     if ((latitude === null) !== (longitude === null) || (latitude !== null && (!Number.isFinite(latitude) || Math.abs(latitude) > 90)) || (longitude !== null && (!Number.isFinite(longitude) || Math.abs(longitude) > 180)) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(editing.opens_at) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(editing.closes_at) || editing.closes_at <= editing.opens_at || !editing.open_days.length) {
       setNotice('Revisa coordenadas y horario de apertura.'); return;
     }
-    if (submit && (latitude === null || longitude === null || editing.name.trim().length < 3 || editing.area.trim().length < 3 || editing.address.trim().length < 8 || editing.city.trim().length < 3 || editing.description.trim().length < 20 || editing.privacy.trim().length < 10 || cents.some(value => value <= 0) || !editing.amenities.includes('Internet rápido') || (!editing.photo_path && !/^https:\/\/\S+$/i.test(editing.image_url.trim())))) {
+    if (submit && (latitude === null || longitude === null || editing.name.trim().length < 3 || editing.area.trim().length < 3 || editing.address.trim().length < 8 || editing.city.trim().length < 3 || editing.description.trim().length < 20 || editing.privacy.trim().length < 10 || cents.some(value => value <= 0) || !editing.amenities.includes('Internet rápido') || (!editing.photo_paths.length && !editing.photo_path && !/^https:\/\/\S+$/i.test(editing.image_url.trim())))) {
       setNotice('Completa la ubicación, dirección, descripción, privacidad, tarifas, internet y foto.'); return;
     }
     setBusy(true); setNotice('');
     const fields = { name: editing.name.trim(), area: editing.area.trim(), city: editing.city.trim(), address: editing.address.trim(), latitude, longitude, open_days: editing.open_days, opens_at: editing.opens_at, closes_at: editing.closes_at, category: editing.category, capacity,
-      description: editing.description.trim(), privacy: editing.privacy.trim(), amenities: editing.amenities, image_url: editing.image_url.trim(),
+      description: editing.description.trim(), privacy: editing.privacy.trim(), amenities: editing.amenities, image_url: editing.photo_paths.length ? '' : editing.image_url.trim(),
       rate_hour_cents: cents[0], rate_day_cents: cents[1], rate_week_cents: cents[2] };
     try {
       let savedId = editing.id;
@@ -209,6 +251,8 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
       setNotice('No se pudo guardar. Revisa los datos e inténtalo de nuevo.');
     } finally { setBusy(false); }
   };
+  const previewPhotos = editing?.photo_paths.length ? photoPreviews : editing?.image_url ? [editing.image_url] : [];
+  const selectedPhotoCount = editing?.photo_paths.length ?? 0;
 
   return <View style={styles.root}>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -220,15 +264,15 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
         <View style={styles.stats}><Stat label="Solicitudes" value={String(waiting)} /><Stat label="Espacios" value={String(spaces.filter(space => !space.is_demo).length + editableDrafts.length)} /><Stat label="Tickets estimados" value={formatMoney(gross)} wide /></View>
         <Text style={styles.section}>Mis espacios</Text>
         {spaces.filter(space => !space.is_demo).length || editableDrafts.length ? <>{spaces.filter(space => !space.is_demo).map(space => <SpaceLine key={space.id} name={space.name} detail={space.area} badge={space.is_published ? 'Publicado' : 'Pausado'} />)}{editableDrafts.slice(0, 3).map(draft => <SpaceLine key={draft.id} name={draft.name || 'Espacio sin nombre'} detail={draft.area || 'Completa la zona'} badge={draft.status === 'en_revision' ? 'En revisión' : draft.status === 'rechazado' ? 'Con observaciones' : 'Borrador'} />)}</> : <Empty text="Agrega tu primer espacio para comenzar." />}
-        <Pressable accessibilityRole="button" onPress={() => { setTab('Espacios'); setPhotoPreview(null); setEditing({ ...blankDraft }); }} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Agregar espacio</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => { setTab('Espacios'); setPhotoPreviews([]); setEditing({ ...blankDraft }); }} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Agregar espacio</Text></Pressable>
       </>}
       {tab === 'Espacios' && !loadError && <>
         <Text style={styles.eyebrow}>CATÁLOGO</Text><Text style={styles.title}>Mis espacios</Text>
-        {!editing ? <><Pressable accessibilityRole="button" onPress={() => { setPhotoPreview(null); setEditing({ ...blankDraft }); }} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Nuevo espacio</Text></Pressable>
+        {!editing ? <><Pressable accessibilityRole="button" onPress={() => { setPhotoPreviews([]); setEditing({ ...blankDraft }); }} style={styles.action}><Icon name="plus" color={palette.white} size={18} /><Text style={styles.actionText}>Nuevo espacio</Text></Pressable>
           {editableDrafts.map(draft => <Pressable key={draft.id} accessibilityRole="button" onPress={() => { if (draft.status === 'borrador' || draft.status === 'rechazado') openDraft(draft); }} style={styles.spaceCard}><SpaceLine name={draft.name || 'Espacio sin nombre'} detail={draft.area || 'Completa la zona'} badge={draft.status === 'en_revision' ? 'En revisión' : draft.status === 'rechazado' ? 'Con observaciones' : 'Borrador'} />{draft.rejection_reason ? <Text style={styles.small}>{draft.rejection_reason}</Text> : null}</Pressable>)}
           {spaces.map(space => <View key={space.id}><SpaceLine name={space.name} detail={space.area} badge={space.is_demo ? 'Muestra · sin ingresos' : space.is_published ? 'Publicado' : 'Pausado'} />{!space.is_demo ? <><Text style={styles.label}>Cerrar fechas · 180 días</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthStrip}>{closureMonths.map(month => <Pressable key={month} accessibilityRole="button" accessibilityState={{ selected: closureMonth === month }} onPress={() => setClosureMonth(month)} style={[styles.monthPill, closureMonth === month && styles.monthPillActive]}><Text style={[styles.monthPillText, closureMonth === month && styles.monthPillTextActive]}>{new Intl.DateTimeFormat('es-MX', { month: 'short', year: 'numeric' }).format(new Date(`${month}-15T12:00:00`))}</Text></Pressable>)}</ScrollView><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateStrip}>{activeClosureDates.map(date => { const closed = closures.some(item => item.space_id === space.id && item.closed_on === date.key); return <Pressable key={date.key} accessibilityRole="button" accessibilityLabel={`${date.label}: ${closed ? 'cerrado; liberar' : 'disponible; cerrar'}`} disabled={busy} onPress={() => toggleClosure(space.id, date.key, closed)} style={[styles.datePill, closed && styles.datePillClosed]}><Text style={[styles.datePillText, closed && styles.datePillTextClosed]}>{date.day} {date.number}</Text><Text style={[styles.datePillSub, closed && styles.datePillTextClosed]}>{closed ? 'Cerrado' : 'Disponible'}</Text></Pressable>; })}</ScrollView></> : null}</View>)}
           {!drafts.length && !spaces.length ? <Empty text="Aún no has agregado espacios." /> : null}</> : <>
-          <View style={styles.formHead}><Text style={styles.section}>{editing.id ? 'Editar borrador' : 'Nuevo espacio'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Cerrar formulario" onPress={() => setEditing(null)}><Icon name="close" size={22} /></Pressable></View>
+          <View style={styles.formHead}><Text style={styles.section}>{editing.id ? 'Editar borrador' : 'Nuevo espacio'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Cerrar formulario" disabled={busy} onPress={() => setEditing(null)}><Icon name="close" size={22} /></Pressable></View>
           <Field label="Nombre del espacio" value={editing.name} onChange={value => updateForm('name', value)} placeholder="Ej. Sala Centro" />
           <Field label="Zona" value={editing.area} onChange={value => updateForm('area', value)} placeholder="Colonia y ciudad" />
           <Field label="Ciudad" value={editing.city} onChange={value => updateForm('city', value)} placeholder="Delicias" />
@@ -246,11 +290,11 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
           <Text style={styles.section}>Disponibilidad habitual</Text>
           <View style={styles.chips}>{weekDays.map((day, index) => <Pressable key={day} accessibilityRole="button" accessibilityState={{ selected: editing.open_days.includes(index) }} onPress={() => setEditing(current => current ? { ...current, open_days: current.open_days.includes(index) ? current.open_days.filter(value => value !== index) : [...current.open_days, index].sort() } : current)} style={[styles.chip, editing.open_days.includes(index) && styles.chipActive]}><Text style={[styles.chipText, editing.open_days.includes(index) && styles.chipTextActive]}>{day}</Text></Pressable>)}</View>
           <View style={styles.rateRow}><View style={styles.rateField}><Field label="Abre" value={editing.opens_at} onChange={value => updateForm('opens_at', value)} placeholder="08:00" /></View><View style={styles.rateField}><Field label="Cierra" value={editing.closes_at} onChange={value => updateForm('closes_at', value)} placeholder="18:00" /></View></View>
-          <Text style={styles.section}>Foto principal</Text>
-          {photoPreview || editing.image_url ? <Image accessibilityLabel="Foto del espacio" source={{ uri: photoPreview || editing.image_url }} style={styles.photo} /> : null}
-          <Pressable accessibilityRole="button" disabled={busy} onPress={choosePhoto} style={styles.secondary}><Text style={styles.secondaryText}>Subir foto · JPG, PNG o WebP</Text></Pressable>
-          <Text style={styles.small}>Primero guarda el borrador. La foto permanece privada durante la revisión.</Text>
-          <Field label="O pega un enlace HTTPS" value={editing.image_url} onChange={value => updateForm('image_url', value)} placeholder="https://..." />
+          <Text style={styles.section}>Fotos del espacio · hasta {MAX_SPACE_PHOTOS}</Text>
+          {previewPhotos.length ? <View style={styles.photoGallery}>{previewPhotos.map((uri, index) => <Image key={`${uri}-${index}`} accessibilityLabel={`Foto ${index + 1} del espacio`} source={{ uri }} style={styles.photoThumb} />)}</View> : null}
+          <Pressable accessibilityRole="button" disabled={busy || selectedPhotoCount >= MAX_SPACE_PHOTOS} onPress={choosePhoto} style={styles.secondary}><Text style={styles.secondaryText}>{photoUploadProgress ? `Subiendo ${photoUploadProgress.completed} de ${photoUploadProgress.total}…` : selectedPhotoCount >= MAX_SPACE_PHOTOS ? 'Máximo de fotos alcanzado' : selectedPhotoCount ? 'Agregar más fotos' : 'Seleccionar varias fotos'}</Text></Pressable>
+          <Text style={styles.small}>{selectedPhotoCount} de {MAX_SPACE_PHOTOS} · JPG, PNG o WebP · hasta 5 MB cada una. Puedes elegir varias juntas; se guardan en privado durante la revisión.</Text>
+          {!selectedPhotoCount ? <Field label="O pega el enlace de una foto" value={editing.image_url} onChange={value => updateForm('image_url', value)} placeholder="https://..." /> : null}
           <Text style={styles.section}>Tarifas en MXN</Text><View style={styles.rateRow}><View style={styles.rateField}><Field label="Hora" value={editing.hour} onChange={value => updateForm('hour', value)} placeholder="0" numeric /></View><View style={styles.rateField}><Field label="Día" value={editing.day} onChange={value => updateForm('day', value)} placeholder="0" numeric /></View><View style={styles.rateField}><Field label="Semana" value={editing.week} onChange={value => updateForm('week', value)} placeholder="0" numeric /></View></View>
           <Pressable accessibilityRole="button" disabled={busy} onPress={() => saveDraft(false)} style={styles.action}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Guardar borrador'}</Text></Pressable>
           <Pressable accessibilityRole="button" disabled={busy} onPress={() => saveDraft(true)} style={styles.secondary}><Text style={styles.secondaryText}>Enviar a revisión</Text></Pressable>
@@ -286,7 +330,7 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
         <Pressable accessibilityRole="button" onPress={onSignOut} style={styles.secondary}><Text style={styles.secondaryText}>Cerrar sesión</Text></Pressable>
       </>}
     </ScrollView>
-    <View accessibilityRole="tablist" style={styles.nav}>{tabs.map(item => <Pressable key={item.label} accessibilityRole="tab" accessibilityState={{ selected: tab === item.label }} onPress={() => { setEditing(null); setTab(item.label); }} style={styles.navItem}><Icon name={item.icon} color={tab === item.label ? palette.action : palette.muted} size={20} /><Text style={[styles.navText, tab === item.label && styles.navActive]}>{item.label}</Text></Pressable>)}</View>
+    <View accessibilityRole="tablist" style={styles.nav}>{tabs.map(item => <Pressable key={item.label} accessibilityRole="tab" accessibilityState={{ selected: tab === item.label }} disabled={busy} onPress={() => { setEditing(null); setTab(item.label); }} style={styles.navItem}><Icon name={item.icon} color={tab === item.label ? palette.action : palette.muted} size={20} /><Text style={[styles.navText, tab === item.label && styles.navActive]}>{item.label}</Text></Pressable>)}</View>
   </View>;
 }
 
@@ -316,7 +360,7 @@ const styles = StyleSheet.create({
   incomeHero: { backgroundColor: palette.plum, borderRadius: 21, padding: 23, marginBottom: 21 }, incomeLabel: { color: palette.blush, fontSize: 12, fontWeight: '700' }, incomeValue: { color: palette.white, fontSize: 33, fontWeight: '900', marginTop: 9 }, incomeHint: { color: palette.blush, fontSize: 11, marginTop: 8 },
   statement: { backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line, borderRadius: 17, padding: 16, marginBottom: 11, marginLeft: 12 }, statementLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, paddingTop: 10 }, statementLabel: { flex: 1, color: palette.muted, fontSize: 11 }, statementValue: { color: palette.plum, fontSize: 11, fontWeight: '700' }, statementTotal: { borderTopWidth: 1, borderColor: palette.line, marginTop: 12, paddingTop: 12, gap: 4 }, fiscalNotice: { backgroundColor: palette.blush, borderRadius: 15, padding: 15, marginTop: 7 },
   formHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, field: { marginTop: 13 }, label: { color: palette.plum, fontSize: 12, fontWeight: '800', marginBottom: 6 }, input: { borderWidth: 1, borderColor: palette.line, borderRadius: 13, paddingHorizontal: 13, paddingVertical: 12, backgroundColor: palette.white, color: palette.plum, fontSize: 14, minHeight: 45 }, multiline: { minHeight: 88, textAlignVertical: 'top' }, chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, chip: { paddingHorizontal: 10, paddingVertical: 9, borderRadius: 10, backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line }, chipActive: { backgroundColor: palette.action, borderColor: palette.action }, chipText: { color: palette.plum, fontSize: 11, fontWeight: '700' }, chipTextActive: { color: palette.white }, rateRow: { flexDirection: 'row', gap: 9 }, rateField: { flex: 1 },
-  photo: { width: '100%', height: 190, borderRadius: 14, backgroundColor: palette.blush, marginVertical: 12 },
+  photoGallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }, photoThumb: { width: 92, height: 78, borderRadius: 12, backgroundColor: palette.blush },
   monthStrip: { gap: 7, paddingBottom: 7 }, monthPill: { borderRadius: 11, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line }, monthPillActive: { backgroundColor: palette.action, borderColor: palette.action }, monthPillText: { color: palette.action, fontSize: 11, fontWeight: '700', textTransform: 'capitalize' }, monthPillTextActive: { color: palette.white }, dateStrip: { gap: 8, paddingBottom: 16 }, datePill: { minWidth: 76, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.white, alignItems: 'center' }, datePillClosed: { backgroundColor: palette.action, borderColor: palette.action }, datePillText: { color: palette.plum, fontSize: 12, fontWeight: '800' }, datePillSub: { color: palette.muted, fontSize: 10, marginTop: 2 }, datePillTextClosed: { color: palette.white },
   nav: { flexDirection: 'row', backgroundColor: palette.white, borderTopWidth: 1, borderColor: palette.line, paddingVertical: 9, paddingHorizontal: 5 }, navItem: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 3 }, navText: { color: palette.muted, fontSize: 10 }, navActive: { color: palette.action, fontWeight: '800' },
 });

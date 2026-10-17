@@ -53,6 +53,7 @@ Crear una app Android en español para descubrir y solicitar espacios de trabajo
 | --- | --- | --- |
 | Catálogo de muestra claro | Completada | Las tarjetas y fichas identifican espacios de muestra y no muestran calificaciones ficticias. |
 | Fotos de la ficha | Completada | Las miniaturas cambian la imagen principal y conservan nombres accesibles. |
+| Carga de varias fotos por anfitrión | Implementado en PWA y Android; actualización remota de Supabase aplicada | Se pueden seleccionar hasta 10 imágenes juntas o por tandas; validación de tipo y peso, progreso, almacenamiento privado durante revisión y galería pública al aprobar. El detalle del espacio muestra las fotos publicadas. |
 | Orden de resultados | Completada | Explorar puede ordenar por recomendación, menor precio o mayor capacidad; mantiene búsqueda, categoría, capacidad y servicios. |
 | Solicitud transparente | Completada | Antes de la autorización solo aparece el folio y el importe estimado de seguimiento. Los tickets e importes estimados del dueño cuentan rentas `confirmada`; no hay datos bancarios ni cobros dentro de Oficia. |
 | Mapa, ubicación y acceso | Mapa de muestra y selector de ubicación implementados | Explorar muestra coordenadas aproximadas para muestras; el alta de anfitrión permite elegir el punto exacto con mapa OSM arrastrable y zoom, y guarda latitud/longitud antes de revisión. Solo se hace pública la ubicación de una ficha aprobada. |
