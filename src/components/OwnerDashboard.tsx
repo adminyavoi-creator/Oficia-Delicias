@@ -145,22 +145,6 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
     }
     setBusy(false);
   };
-  const acceptBooking = async (booking: OwnerBooking) => {
-    if (!supabase || busy) return;
-    setBusy(true); setNotice('');
-    const { data, error } = await supabase.from('bookings').update({ status: 'aceptada_anfitrion', rejection_reason: null })
-      .eq('id', booking.id).eq('status', 'pendiente').select('id').maybeSingle();
-    if (error) {
-      const message = error.message.toLowerCase();
-      setNotice(message.includes('muestra') ? 'Las solicitudes de muestra no se pueden aceptar.' : message.includes('ya fue revisada') ? 'Esta solicitud ya fue atendida. Actualiza la lista.' : 'No se pudo aceptar la solicitud. Actualiza la lista e inténtalo de nuevo.');
-    } else if (!data) {
-      setNotice('La solicitud ya cambió de estado. Actualiza la lista.');
-    } else {
-      setNotice('Solicitud aceptada. Operaciones revisará el movimiento antes de autorizar la renta.');
-      await refresh().catch(() => setNotice('Solicitud aceptada. Actualiza el panel para ver el seguimiento.'));
-    }
-    setBusy(false);
-  };
   const choosePhoto = () => {
     if (!editing || !supabase || busy) return;
     const input = document.createElement('input');
@@ -306,14 +290,13 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
           const space = spaces.find(item => item.id === booking.space_id);
           const sample = space?.is_demo ?? true;
           const canComplete = booking.status === 'confirmada' && !booking.completed_at && new Date(booking.ends_at).getTime() <= Date.now();
-          const statusLabel = booking.completed_at ? 'Realizada' : booking.status === 'confirmada' ? 'Autorizada' : booking.status === 'aceptada_anfitrion' ? 'Aceptada · revisión de Oficia' : booking.status === 'rechazada' ? 'Rechazada' : 'Nueva solicitud';
+          const statusLabel = booking.completed_at ? 'Realizada' : booking.status === 'confirmada' ? 'Autorizada' : booking.status === 'pendiente' || booking.status === 'aceptada_anfitrion' ? 'En revisión por Operaciones' : booking.status === 'rechazada' ? 'Rechazada' : 'Solicitud enviada';
           return <View key={booking.id} style={styles.booking}>
             <View style={styles.line}><Text style={styles.cardTitle}>{spaceName(booking.space_id)}</Text><Text style={styles.badge}>{statusLabel}</Text></View>
             <Text style={styles.small}>{formatDate(booking.local_date)} · {booking.local_time.slice(0, 5)} · {booking.quantity} {booking.unit.toLowerCase()}</Text>
             <Text style={styles.amount}>{formatMoney(booking.total_cents / 100)}</Text><Text style={styles.small}>{booking.status === 'confirmada' ? 'Ticket autorizado · movimiento externo validado' : 'Solicitud · todavía no es un ticket autorizado'}</Text>
             {financialEvents.filter(event => event.booking_id === booking.id).map(event => <Text key={event.id} style={styles.reviewHint}>{ownerMovementLabel(event.direction)} · {formatMoney(event.amount_cents / 100)} · {formatDate(event.event_date)}</Text>)}
-            {!sample && booking.status === 'pendiente' ? <><Text style={styles.reviewHint}>Al aceptar, Operaciones registrará y validará el movimiento externo antes de activar el ticket.</Text><Pressable accessibilityRole="button" disabled={busy} onPress={() => void acceptBooking(booking)} style={styles.action}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Aceptar solicitud'}</Text></Pressable></> : null}
-            {!sample && booking.status === 'aceptada_anfitrion' ? <Text style={styles.reviewHint}>Aceptada por ti · pendiente de validación y autorización de Operaciones.</Text> : null}
+            {!sample && (booking.status === 'pendiente' || booking.status === 'aceptada_anfitrion') ? <Text style={styles.reviewHint}>Operaciones está revisando el pago y el acuerdo. Te enviaremos una notificación cuando la renta quede autorizada.</Text> : null}
             {!sample && canComplete ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => void updateBooking(booking)} style={styles.action}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Marcar como realizada'}</Text></Pressable> : null}
             {!sample && booking.status === 'confirmada' ? <BookingConversation bookingId={booking.id} userId={userId} ownerMode focus={focusBookingId === booking.id} /> : null}
             {!sample && booking.completed_at ? <HostCustomerReview bookingId={booking.id} /> : null}
