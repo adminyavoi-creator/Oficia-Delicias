@@ -1,3 +1,4 @@
+-- Idempotent alignment with the verified private proof-upload policy.
 drop policy if exists "Cliente carga comprobante de renta" on storage.objects;
 create policy "Cliente carga comprobante de renta"
   on storage.objects for insert to authenticated
