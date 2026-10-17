@@ -105,7 +105,8 @@ export function OperationsCenter({
     payouts: events.filter(event => event.direction === 'pago_anfitrion').reduce((sum, event) => sum + event.amount_cents, 0),
     refunds: events.filter(event => event.direction === 'reembolso_cliente').reduce((sum, event) => sum + event.amount_cents, 0),
   }), [events]);
-  const pending = realBookings.filter(item => item.status === 'pendiente');
+  const pending = realBookings.filter(item => item.status === 'aceptada_anfitrion');
+  const awaitingHost = realBookings.filter(item => item.status === 'pendiente').length;
   const openPayouts = realBookings.filter(item => item.status === 'confirmada' && item.completed_at
     && item.owner_balance_estimate_cents - (sumsByBooking.get(item.id)?.paidOwner ?? 0) > 0);
 
@@ -169,14 +170,14 @@ export function OperationsCenter({
           <Stat value={formatMoney(totals.collected / 100)} label="Cobros registrados" />
           <Stat value={formatMoney(totals.payouts / 100)} label="Pagos a dueños" />
         </View>
-        <View style={styles.card}><Text style={styles.cardTitle}>Pendientes de atención</Text><Text style={styles.copy}>{drafts.length} espacios · {pending.length} solicitudes · {openPayouts.length} rentas finalizadas por liquidar</Text>
+        <View style={styles.card}><Text style={styles.cardTitle}>Pendientes de atención</Text><Text style={styles.copy}>{drafts.length} espacios · {pending.length} aceptadas por validar · {awaitingHost} esperando respuesta del dueño · {openPayouts.length} rentas finalizadas por liquidar</Text>
           <View style={styles.row}><Pressable accessibilityRole="button" onPress={() => setSection('Espacios')} style={styles.smallAction}><Text style={styles.smallActionText}>Revisar espacios</Text></Pressable><Pressable accessibilityRole="button" onPress={() => setSection('Solicitudes')} style={styles.smallAction}><Text style={styles.smallActionText}>Ver solicitudes</Text></Pressable></View>
         </View>
         <View style={styles.card}><Text style={styles.cardTitle}>Balance de bitácora</Text><LedgerLine label="Cobros de clientes" value={formatMoney(totals.collected / 100)} /><LedgerLine label="Reembolsos registrados" value={formatMoney(totals.refunds / 100)} /><LedgerLine label="Pagos a dueños" value={formatMoney(totals.payouts / 100)} /><Text style={styles.fine}>Importes de operaciones externas registradas; no son movimientos procesados por Oficia.</Text></View>
         <Pressable accessibilityRole="button" disabled={loading} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>Actualizar centro</Text></Pressable>
       </>}
       {section === 'Solicitudes' && <>
-        <Text style={styles.sectionTitle}>Solicitudes de renta</Text><Text style={styles.copy}>Autoriza después de validar disponibilidad y el cobro fuera de Oficia.</Text>
+        <Text style={styles.sectionTitle}>Solicitudes de renta</Text><Text style={styles.copy}>Primero el dueño acepta; luego Operaciones registra el movimiento externo y autoriza la renta.</Text>
         {realBookings.length ? realBookings.map(booking => <BookingCard key={booking.id} booking={booking} sums={totalsFor(booking.id)} events={eventsByBooking.get(booking.id) ?? []} entry={entry?.bookingId === booking.id ? entry : null} busy={busy} reason={reasons[booking.id] ?? ''} onReason={value => setReasons(current => ({ ...current, [booking.id]: value }))} onStartEntry={direction => startEntry(booking, direction)} onEntryChange={setEntry} onSaveEntry={() => void saveEntry()} onCancelEntry={() => setEntry(null)} onDecide={decision => void decide(booking, decision)} />) : <Empty text="Las solicitudes de espacios reales aparecerán aquí." />}
       </>}
       {section === 'Movimientos' && <>
@@ -201,7 +202,7 @@ function BookingCard({ booking, sums, events, entry, busy, reason, onReason, onS
   const collectDue = Math.max(booking.total_cents - sums.collected, 0);
   const ownerDue = Math.max(booking.owner_balance_estimate_cents - sums.paidOwner, 0);
   const refundable = Math.max(sums.collected, 0);
-  const statusLabel = booking.status === 'pendiente' ? 'Pendiente' : booking.status === 'confirmada' ? booking.completed_at ? 'Realizada' : 'Autorizada' : booking.status === 'rechazada' ? 'Rechazada' : booking.status;
+  const statusLabel = booking.status === 'pendiente' ? 'Esperando al dueño' : booking.status === 'aceptada_anfitrion' ? 'Aceptada · falta validar' : booking.status === 'confirmada' ? booking.completed_at ? 'Realizada' : 'Autorizada' : booking.status === 'rechazada' ? 'Rechazada' : booking.status;
   return <View style={styles.bookingCard}>
     <View style={styles.eventTop}><View style={styles.badge}><Text style={styles.badgeText}>{statusLabel}</Text></View><Text style={styles.meta}>OF-{booking.id.slice(0, 8).toUpperCase()}</Text></View>
     <Text style={styles.bookingTitle}>{booking.spaces?.name ?? 'Espacio'}</Text><Text style={styles.copy}>{booking.spaces?.area ?? ''} · {dateLabel(booking.local_date)} · {booking.local_time.slice(0, 5)}</Text>
@@ -212,7 +213,8 @@ function BookingCard({ booking, sums, events, entry, busy, reason, onReason, onS
     <LedgerLine label="Dueño · referencia antes de impuestos" value={formatMoney(booking.owner_balance_estimate_cents / 100)} />
     {sums.paidOwner > 0 ? <LedgerLine label="Pagado al dueño" value={formatMoney(sums.paidOwner / 100)} /> : null}
     <Text style={styles.fine}>Comisión Oficia: {formatMoney(booking.operations_fee_cents / 100)} · IVA estimado de comisión: {formatMoney(booking.operations_fee_vat_estimate_cents / 100)}. No es liquidación fiscal.</Text>
-    {booking.status === 'pendiente' && <>
+    {booking.status === 'pendiente' ? <Text style={styles.meta}>El dueño aún debe aceptar esta solicitud. El ticket no está activo.</Text> : null}
+    {booking.status === 'aceptada_anfitrion' && <>
       <View style={styles.row}><Pressable accessibilityRole="button" disabled={busy || collectDue === 0} onPress={() => onStartEntry('cobro_cliente')} style={[styles.action, collectDue === 0 && styles.disabled]}><Text style={styles.actionText}>Registrar cobro externo</Text></Pressable>{refundable > 0 ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => onStartEntry('reembolso_cliente')} style={styles.secondary}><Text style={styles.secondaryText}>Reembolso</Text></Pressable> : null}</View>
       {sums.collected >= booking.total_cents ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => onDecide('confirmar')} style={[styles.action, styles.fullAction]}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Autorizar renta'}</Text></Pressable> : <Text style={styles.meta}>Registra el cobro completo para habilitar la autorización.</Text>}
       <TextInput accessibilityLabel={`Motivo de rechazo ${booking.id}`} value={reason} onChangeText={onReason} maxLength={300} placeholder="Motivo si se rechaza" placeholderTextColor={palette.muted} style={styles.input} />

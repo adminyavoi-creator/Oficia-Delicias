@@ -44,7 +44,7 @@ export type Booking = {
   unit: Unit;
   quantity: number;
   total: number;
-  status: 'Solicitud enviada' | 'Confirmada' | 'Rechazada';
+  status: 'Solicitud enviada' | 'Aceptada por el anfitrión' | 'Confirmada' | 'Rechazada';
   transferReference?: string;
   payerReference?: string | null;
   paymentStatus?: TransferStatus;

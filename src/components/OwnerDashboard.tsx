@@ -9,6 +9,8 @@ import { CoordinatePickerMap } from './CoordinatePickerMap';
 import { Icon, IconName } from './Icon';
 import { ProfileEditor } from './ProfileEditor';
 import { NotificationSettings } from './NotificationSettings';
+import { BookingConversation } from './BookingConversation';
+import { HostCustomerReview } from './HostCustomerReview';
 
 type OwnerTab = 'Inicio' | 'Espacios' | 'Solicitudes' | 'Tickets' | 'Perfil';
 type OwnedSpace = { id: string; name: string; area: string; is_demo: boolean; is_published: boolean; rate_hour_cents: number };
@@ -28,8 +30,8 @@ const toMoney = (value: string) => Math.round(Number(value) * 100);
 const toCoordinate = (value: string) => value.trim() && Number.isFinite(Number(value)) ? Number(value) : null;
 const formFromDraft = (draft: Draft): DraftForm => ({ id: draft.id, name: draft.name, area: draft.area, city: draft.city, address: draft.address, latitude: draft.latitude == null ? '' : String(draft.latitude), longitude: draft.longitude == null ? '' : String(draft.longitude), open_days: draft.open_days, opens_at: draft.opens_at.slice(0, 5), closes_at: draft.closes_at.slice(0, 5), photo_path: draft.photo_path, category: draft.category, capacity: String(draft.capacity), description: draft.description, privacy: draft.privacy, amenities: draft.amenities ?? [], image_url: draft.image_url, hour: String(draft.rate_hour_cents / 100), day: String(draft.rate_day_cents / 100), week: String(draft.rate_week_cents / 100) });
 
-export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSaveProfile, isOperations, onOpenOperations, onSignOut, onRequestNotifications }: {
-  userId: string; email: string; profileName: string; avatarUrl: string; onSaveProfile: (name: string, avatarUrl: string) => Promise<void>; isOperations: boolean; onOpenOperations: () => void; onSignOut: () => void; onRequestNotifications: () => Promise<boolean>;
+export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSaveProfile, isOperations, onOpenOperations, onSignOut, onRequestNotifications, focusBookingId }: {
+  userId: string; email: string; profileName: string; avatarUrl: string; onSaveProfile: (name: string, avatarUrl: string) => Promise<void>; isOperations: boolean; onOpenOperations: () => void; onSignOut: () => void; onRequestNotifications: () => Promise<boolean>; focusBookingId: string | null;
 }) {
   const [tab, setTab] = useState<OwnerTab>('Inicio');
   const [spaces, setSpaces] = useState<OwnedSpace[]>([]);
@@ -78,10 +80,19 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
     refresh().catch(() => { if (active) setLoadError(true); });
     return () => { active = false; };
   }, [refresh]);
+  useEffect(() => {
+    if (!supabase) return;
+    let active = true;
+    const channel = supabase.channel(`oficia-owner-bookings-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+        if (active) void refresh().catch(() => setLoadError(true));
+      }).subscribe();
+    return () => { active = false; void supabase?.removeChannel(channel); };
+  }, [refresh, userId]);
 
   const estimates = useMemo(() => ownerTicketEstimates(bookings, spaces), [bookings, spaces]);
   const gross = estimates.grossCents / 100;
-  const waiting = bookings.filter(booking => booking.status === 'pendiente').length;
+  const waiting = bookings.filter(booking => ['pendiente', 'aceptada_anfitrion'].includes(booking.status)).length;
   const editableDrafts = drafts.filter(draft => draft.status !== 'aprobado');
   const spaceName = (id: string) => spaces.find(space => space.id === id)?.name ?? 'Espacio';
   const updateForm = (key: keyof DraftForm, value: string) => setEditing(current => current ? { ...current, [key]: value } : current);
@@ -112,6 +123,22 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
     else {
       setNotice('Renta finalizada. El cliente ya puede dejar su opinión.');
       await refresh().catch(() => setNotice('La solicitud se guardó. Actualiza el panel para ver el cambio.'));
+    }
+    setBusy(false);
+  };
+  const acceptBooking = async (booking: OwnerBooking) => {
+    if (!supabase || busy) return;
+    setBusy(true); setNotice('');
+    const { data, error } = await supabase.from('bookings').update({ status: 'aceptada_anfitrion', rejection_reason: null })
+      .eq('id', booking.id).eq('status', 'pendiente').select('id').maybeSingle();
+    if (error) {
+      const message = error.message.toLowerCase();
+      setNotice(message.includes('muestra') ? 'Las solicitudes de muestra no se pueden aceptar.' : message.includes('ya fue revisada') ? 'Esta solicitud ya fue atendida. Actualiza la lista.' : 'No se pudo aceptar la solicitud. Actualiza la lista e inténtalo de nuevo.');
+    } else if (!data) {
+      setNotice('La solicitud ya cambió de estado. Actualiza la lista.');
+    } else {
+      setNotice('Solicitud aceptada. Operaciones revisará el movimiento antes de autorizar la renta.');
+      await refresh().catch(() => setNotice('Solicitud aceptada. Actualiza el panel para ver el seguimiento.'));
     }
     setBusy(false);
   };
@@ -235,19 +262,22 @@ export function OwnerDashboard({ userId, email, profileName, avatarUrl, onSavePr
           const space = spaces.find(item => item.id === booking.space_id);
           const sample = space?.is_demo ?? true;
           const canComplete = booking.status === 'confirmada' && !booking.completed_at && new Date(booking.ends_at).getTime() <= Date.now();
+          const statusLabel = booking.completed_at ? 'Realizada' : booking.status === 'confirmada' ? 'Autorizada' : booking.status === 'aceptada_anfitrion' ? 'Aceptada · revisión de Oficia' : booking.status === 'rechazada' ? 'Rechazada' : 'Nueva solicitud';
           return <View key={booking.id} style={styles.booking}>
-            <View style={styles.line}><Text style={styles.cardTitle}>{spaceName(booking.space_id)}</Text><Text style={styles.badge}>{booking.completed_at ? 'Realizada' : booking.status === 'confirmada' ? 'Autorizada' : booking.status === 'rechazada' ? 'Rechazada' : 'Pendiente'}</Text></View>
+            <View style={styles.line}><Text style={styles.cardTitle}>{spaceName(booking.space_id)}</Text><Text style={styles.badge}>{statusLabel}</Text></View>
             <Text style={styles.small}>{formatDate(booking.local_date)} · {booking.local_time.slice(0, 5)} · {booking.quantity} {booking.unit.toLowerCase()}</Text>
-            <Text style={styles.amount}>{formatMoney(booking.total_cents / 100)}</Text><Text style={styles.small}>Ticket informativo · sin cobro</Text>
+            <Text style={styles.amount}>{formatMoney(booking.total_cents / 100)}</Text><Text style={styles.small}>{booking.status === 'confirmada' ? 'Ticket autorizado · movimiento externo validado' : 'Solicitud · todavía no es un ticket autorizado'}</Text>
             {financialEvents.filter(event => event.booking_id === booking.id).map(event => <Text key={event.id} style={styles.reviewHint}>{ownerMovementLabel(event.direction)} · {formatMoney(event.amount_cents / 100)} · {formatDate(event.event_date)}</Text>)}
-            {!sample && booking.status === 'pendiente' ? <Text style={styles.reviewHint}>Operaciones validará el cobro externo y autorizará la renta.</Text> : null}
+            {!sample && booking.status === 'pendiente' ? <><Text style={styles.reviewHint}>Al aceptar, Operaciones registrará y validará el movimiento externo antes de activar el ticket.</Text><Pressable accessibilityRole="button" disabled={busy} onPress={() => void acceptBooking(booking)} style={styles.action}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Aceptar solicitud'}</Text></Pressable></> : null}
+            {!sample && booking.status === 'aceptada_anfitrion' ? <Text style={styles.reviewHint}>Aceptada por ti · pendiente de validación y autorización de Operaciones.</Text> : null}
             {!sample && canComplete ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => void updateBooking(booking)} style={styles.action}><Text style={styles.actionText}>{busy ? 'Guardando…' : 'Marcar como realizada'}</Text></Pressable> : null}
-            {!sample && booking.completed_at ? <Text style={styles.reviewHint}>El cliente ya puede calificar esta renta.</Text> : null}
+            {!sample && booking.status === 'confirmada' ? <BookingConversation bookingId={booking.id} userId={userId} ownerMode focus={focusBookingId === booking.id} /> : null}
+            {!sample && booking.completed_at ? <HostCustomerReview bookingId={booking.id} /> : null}
           </View>;
         }) : <Empty text="Las solicitudes para tus espacios aparecerán aquí." />}
-        <Text style={styles.small}>Cada solicitud genera un ticket estimado. No se procesa dinero en Oficia.</Text>
+        <Text style={styles.small}>Los tickets y sus estimados aparecen después de que Operaciones autoriza la renta. No se procesa dinero en Oficia.</Text>
       </>}
-      {tab === 'Tickets' && !loadError && <><Text style={styles.eyebrow}>DESGLOSE</Text><Text style={styles.title}>Tickets por espacio</Text><View style={styles.incomeHero}><Text style={styles.incomeLabel}>Importe de solicitudes activas</Text><Text style={styles.incomeValue}>{formatMoney(gross)}</Text><Text style={styles.incomeHint}>Referencia informativa; no representa ingresos cobrados.</Text></View>
+      {tab === 'Tickets' && !loadError && <><Text style={styles.eyebrow}>DESGLOSE</Text><Text style={styles.title}>Tickets autorizados</Text><View style={styles.incomeHero}><Text style={styles.incomeLabel}>Rentas autorizadas por Operaciones</Text><Text style={styles.incomeValue}>{formatMoney(gross)}</Text><Text style={styles.incomeHint}>Referencia informativa; no representa ingresos cobrados.</Text></View>
         {spaces.filter(space => !space.is_demo).length ? spaces.filter(space => !space.is_demo).map(space => { const spaceBookings = estimates.active.filter(booking => booking.space_id === space.id); const count = spaceBookings.length; return <View key={space.id}><View style={styles.booking}><View style={styles.line}><Text style={styles.cardTitle}>{space.name}</Text><Text style={styles.amount}>{formatMoney((estimates.bySpaceCents.get(space.id) ?? 0) / 100)}</Text></View><Text style={styles.small}>{count} {count === 1 ? 'ticket estimado' : 'tickets estimados'}</Text></View>{spaceBookings.map(booking => <View key={booking.id} style={styles.statement}><View style={styles.line}><Text style={styles.cardTitle}>Desglose · {formatDate(booking.local_date)}</Text><Text style={styles.badge}>{booking.id}</Text></View><StatementLine label="Renta base" value={formatMoney(booking.total_cents / 100)} /><StatementLine label="Tarifa Oficia estimada · 15%" value={`− ${formatMoney(booking.operations_fee_cents / 100)}`} /><StatementLine label="IVA estimado sobre la comisión · 16%" value={`− ${formatMoney(booking.operations_fee_vat_estimate_cents / 100)}`} /><View style={styles.statementTotal}><Text style={styles.cardTitle}>Referencia del dueño antes de sus impuestos</Text><Text style={styles.amount}>{formatMoney(booking.owner_balance_estimate_cents / 100)}</Text></View>{financialEvents.filter(event => event.booking_id === booking.id).map(event => <StatementLine key={event.id} label={ownerMovementLabel(event.direction)} value={formatMoney(event.amount_cents / 100)} />)}</View>)}</View>; }) : <Empty text="Los tickets de espacios reales aparecerán aquí cuando lleguen solicitudes." />}
         <View style={styles.fiscalNotice}><Text style={styles.cardTitle}>Cotización informativa · sin pago</Text><Text style={styles.small}>La comisión de Oficia se calcula al 15% sobre la renta base, sin sumar impuestos de la renta. El IVA sobre la comisión es una referencia estimada. Los impuestos de la renta y retenciones del anfitrión no están calculados. Oficia no cobra, retiene ni concilia dinero; estos importes no acreditan un pago.</Text></View>
       </>}

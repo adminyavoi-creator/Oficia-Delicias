@@ -22,7 +22,9 @@ export function ownerStatement(baseCents: number) {
 export function ownerTicketEstimates<T extends RevenueBooking>(bookings: T[], spaces: RevenueSpace[]) {
   const realIds = new Set(spaces.filter(space => !space.is_demo).map(space => space.id));
   const bySpaceCents = new Map<string, number>();
-  const active = bookings.filter(booking => realIds.has(booking.space_id) && booking.status !== 'rechazada');
+  // A visible ticket is created only after the host has accepted, Operations
+  // has recorded the external collection, and the booking is authorized.
+  const active = bookings.filter(booking => realIds.has(booking.space_id) && booking.status === 'confirmada');
   for (const booking of active) bySpaceCents.set(booking.space_id, (bySpaceCents.get(booking.space_id) ?? 0) + booking.total_cents);
   return { active, bySpaceCents, grossCents: [...bySpaceCents.values()].reduce((sum, cents) => sum + cents, 0) };
 }
