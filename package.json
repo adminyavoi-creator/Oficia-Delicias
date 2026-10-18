@@ -36,5 +36,8 @@
     "supabase": "2.121.0",
     "typescript": "~5.9.2",
     "vite": "8.2.2"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6"
   }
 }

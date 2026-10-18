@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   primaryText: { color: palette.white, fontWeight: '900', fontSize: 13 }, disabled: { opacity: 0.5 },
   secondary: { minHeight: 44, borderRadius: 13, borderWidth: 1, borderColor: palette.action, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, marginTop: 9 },
   secondaryText: { color: palette.action, fontWeight: '900', fontSize: 12 },
-  chatInput: { minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: palette.line, color: palette.plum, paddingHorizontal: 12, paddingVertical: 9, fontSize: 13, textAlignVertical: 'top' },
+  input: { minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: palette.line, color: palette.plum, paddingHorizontal: 12, paddingVertical: 9, fontSize: 13, textAlignVertical: 'top' },
   proofRow: { flexDirection: 'row', gap: 10, alignItems: 'center', padding: 11, borderRadius: 13, backgroundColor: palette.cream, marginTop: 7 },
   proofName: { color: palette.plum, fontWeight: '800', fontSize: 12 }, successCard: { backgroundColor: '#E9F5EF', borderRadius: 16, padding: 15 },
   successTitle: { color: palette.action, fontWeight: '900', fontSize: 15 }, chatCard: { backgroundColor: palette.white, borderRadius: 18, padding: 15, borderWidth: 1, borderColor: palette.line },
