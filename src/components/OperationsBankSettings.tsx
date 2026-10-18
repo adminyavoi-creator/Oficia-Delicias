@@ -18,7 +18,7 @@ export function OperationsBankSettings({ isOperations }: { isOperations: boolean
     setLoading(true);
     const { data, error } = await supabase.rpc('operations_transfer_settings');
     const row = Array.isArray(data) ? data[0] : data;
-    if (error) setNotice('No se pudieron cargar los datos bancarios.');
+    if (error) setNotice('No se pudieron cargar los datos bancarios. Intenta actualizar.');
     else if (row) setForm({
       bankName: row.bank_name ?? '',
       clabe: row.clabe ?? '',
@@ -43,7 +43,7 @@ export function OperationsBankSettings({ isOperations }: { isOperations: boolean
       p_bank_name: form.bankName.trim(), p_clabe: clabe,
       p_beneficiary: form.beneficiary.trim(), p_instructions: form.instructions.trim(),
     });
-    if (error) setNotice(error.message || 'No se pudieron guardar los datos.');
+    if (error) setNotice('No se pudieron guardar los datos. Revisa la CLABE y vuelve a intentarlo.');
     else { setForm(current => ({ ...current, clabe })); setNotice('Datos guardados. Solo aparecerán en solicitudes reales.'); }
     setSaving(false);
   };

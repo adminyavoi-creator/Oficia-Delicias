@@ -156,7 +156,7 @@ export function BookingWorkflowModal({ visible, bookingId, userId, mode, onClose
     if (!supabase || busy) return;
     setBusy(true); setNotice('');
     const { error } = await supabase.rpc('operations_confirm_booking_payment', { p_booking_id: bookingId, p_note: '' });
-    if (error) setNotice(error.message || 'No se pudo confirmar el pago.');
+    if (error) setNotice('No se pudo confirmar la recepción. Verifica el comprobante y vuelve a intentarlo.');
     else { setNotice('Pago externo confirmado y registrado.'); await refresh(); onChanged?.(); }
     setBusy(false);
   };
@@ -166,7 +166,7 @@ export function BookingWorkflowModal({ visible, bookingId, userId, mode, onClose
     if (!supabase || busy || reason.length < 4) { setNotice('Indica qué debe corregir el cliente.'); return; }
     setBusy(true); setNotice('');
     const { error } = await supabase.rpc('operations_reject_booking_proof', { p_booking_id: bookingId, p_reason: reason });
-    if (error) setNotice(error.message || 'No se pudo solicitar un nuevo comprobante.');
+    if (error) setNotice('No se pudo enviar la indicación. Revisa el motivo e inténtalo de nuevo.');
     else { setProofReviewNote(''); setNotice('Se pidió un nuevo comprobante al cliente.'); await refresh(); onChanged?.(); }
     setBusy(false);
   };
@@ -175,7 +175,7 @@ export function BookingWorkflowModal({ visible, bookingId, userId, mode, onClose
     if (!supabase || busy) return;
     setBusy(true); setNotice('');
     const { error } = await supabase.rpc('operations_close_booking_agreement', { p_booking_id: bookingId });
-    if (error) setNotice(error.message || 'No se pudo cerrar el acuerdo.');
+    if (error) setNotice('No se pudo cerrar el acuerdo. Verifica que la recepción esté confirmada.');
     else { setNotice('Acuerdo cerrado. La renta ya puede autorizarse.'); await refresh(); onChanged?.(); }
     setBusy(false);
   };
@@ -184,7 +184,7 @@ export function BookingWorkflowModal({ visible, bookingId, userId, mode, onClose
     if (!supabase || busy) return;
     setBusy(true); setNotice('');
     const { error } = await supabase.rpc('operations_decide_booking', { p_booking_id: bookingId, p_decision: 'confirmar', p_reason: '' });
-    if (error) setNotice(error.message || 'No se pudo autorizar la renta.');
+    if (error) setNotice('No se pudo autorizar la renta. Revisa el estado y la disponibilidad del espacio.');
     else { setNotice('Renta autorizada. El dueño recibió una notificación.'); await refresh(); onChanged?.(); }
     setBusy(false);
   };
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   primaryText: { color: palette.white, fontWeight: '900', fontSize: 13 }, disabled: { opacity: 0.5 },
   secondary: { minHeight: 44, borderRadius: 13, borderWidth: 1, borderColor: palette.action, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, marginTop: 9 },
   secondaryText: { color: palette.action, fontWeight: '900', fontSize: 12 },
-  input: { minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: palette.line, color: palette.plum, paddingHorizontal: 12, paddingVertical: 9, fontSize: 13, textAlignVertical: 'top' },
+  chatInput: { minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: palette.line, color: palette.plum, paddingHorizontal: 12, paddingVertical: 9, fontSize: 13, textAlignVertical: 'top' },
   proofRow: { flexDirection: 'row', gap: 10, alignItems: 'center', padding: 11, borderRadius: 13, backgroundColor: palette.cream, marginTop: 7 },
   proofName: { color: palette.plum, fontWeight: '800', fontSize: 12 }, successCard: { backgroundColor: '#E9F5EF', borderRadius: 16, padding: 15 },
   successTitle: { color: palette.action, fontWeight: '900', fontSize: 15 }, chatCard: { backgroundColor: palette.white, borderRadius: 18, padding: 15, borderWidth: 1, borderColor: palette.line },

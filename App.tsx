@@ -467,7 +467,16 @@ function AppContent() {
     }
     if (!user) { setPendingBooking(true); setAuthNotice('Inicia sesión para enviar y consultar tus solicitudes.'); setScreen('auth'); return; }
     const { data, error } = await supabase.from('bookings').insert({ client_id: user.id, space_id: selected.id, local_date: selectedDate, local_time: selectedTime, unit, quantity }).select('*').single();
-    if (error) { showMessage('No se pudo enviar la solicitud', error.message); return; }
+    if (error) {
+      const reason = error.message.toLocaleLowerCase('es-MX');
+      const message = reason.includes('horario') || reason.includes('disponible')
+        ? 'Ese horario acaba de ocuparse. Elige otra fecha u hora.'
+        : reason.includes('cerrado')
+          ? 'El espacio no abre en ese horario. Elige otro.'
+          : 'Revisa tu conexión e inténtalo de nuevo.';
+      showMessage('No se pudo enviar la solicitud', message);
+      return;
+    }
     const booking = mapBooking(data as BookingRow);
     setBookings(current => [booking, ...current]); setLatestBooking(booking); setScreen('receipt');
     openBookingWorkflow((data as BookingRow).id, 'customer');
@@ -579,7 +588,7 @@ function AppContent() {
     if (user) await deactivatePushForUser(user.id).catch(() => {});
     try { await signOutFromGoogle(); } catch { /* Supabase revoca la sesión aunque Google no pueda cerrar su selector. */ }
     const { error } = await supabase?.auth.signOut() ?? { error: new Error('No hay conexión de autenticación.') };
-    if (error) { showMessage('No se pudo cerrar sesión', error.message); return; }
+    if (error) { showMessage('No se pudo cerrar sesión', 'Revisa tu conexión e inténtalo de nuevo.'); return; }
     await AsyncStorage.removeItem('oficia:pending-account-type');
     setUser(null); setAccountType(null);
     setPendingAccountType(null); setPendingBooking(false); setAuthMode('entrar'); setAuthNotice(''); setScreen('chooseRole');
