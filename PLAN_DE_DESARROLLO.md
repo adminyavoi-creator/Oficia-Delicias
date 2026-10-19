@@ -1,5 +1,11 @@
 # Plan de desarrollo · Oficia
 
+## Correcciones verificadas · 19 oct 2026
+
+- **Solicitud de Sala de Juntas Ejecutiva Presidencia:** se identificó y corrigió el permiso faltante para `private.assert_booking_availability(...)`, que el trigger de inserción requiere al crear una reserva. La migración de producción `20261019182910_fix_booking_availability_function_grant` otorga solo ese permiso a sesiones autenticadas. Una prueba transaccional como cliente creó correctamente la solicitud, calculó fecha, importe y folio, y se revirtió sin guardar datos de prueba.
+- **Mensajes de reserva:** el cliente ya distingue cuenta de anfitrión, sesión vencida, fecha pasada, cierre y ocupación real. No atribuye estos rechazos de servidor a un problema de internet.
+- **Marca OAuth:** la página pública `/informacion/` ahora identifica de forma explícita la aplicación, funcionalidad, zona, soporte y enlaces de privacidad y condiciones. El alias actual solo tiene el subdominio compartido `oficia-delicias.vercel.app`; la verificación de marca sigue requiriendo un dominio propio conectado a Vercel y verificado en Google Search Console.
+
 ## Decisión vigente · 19 oct 2026
 
 La aplicación **no procesa ni retiene dinero**. En una solicitud real, el ticket presenta los datos bancarios configurados por Operaciones mediante una consulta protegida; el cliente transfiere fuera de Oficia y puede subir su comprobante al espacio privado de la reserva. Operaciones revisa el comprobante, confirma la recepción externa, cierra el acuerdo y autoriza la renta. El dueño recibe la solicitud y su notificación push solo después de esa autorización. Los importes y el desglose (renta, tarifa Oficia del 15%, IVA estimado de la tarifa y referencia neta) son informativos: Oficia no cobra, transfiere, retiene ni concilia fondos. Las referencias y notas del registro externo siguen rechazando datos bancarios.

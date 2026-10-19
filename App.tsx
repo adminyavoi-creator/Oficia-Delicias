@@ -38,6 +38,29 @@ const tabItems: { label: Tab; icon: IconName }[] = [
   { label: 'Inicio', icon: 'home' }, { label: 'Explorar', icon: 'explore' }, { label: 'Favoritos', icon: 'heart' }, { label: 'Reservas', icon: 'calendar' }, { label: 'Perfil', icon: 'user' },
 ];
 
+function bookingSubmissionMessage(error: { message?: string; code?: string }) {
+  const reason = (error.message ?? '').toLocaleLowerCase('es-MX');
+  if (reason.includes('ya no está disponible') || reason.includes('horario') || reason.includes('disponible')) {
+    return 'Ese horario acaba de ocuparse. Elige otra fecha u hora.';
+  }
+  if (reason.includes('cerrado') || reason.includes('termina después del cierre')) {
+    return 'El espacio no abre durante toda la estancia elegida. Selecciona otro horario.';
+  }
+  if (reason.includes('fecha futura') || reason.includes('próximos 180 días')) {
+    return 'Elige una fecha y hora futuras, dentro de los próximos 180 días.';
+  }
+  if (reason.includes('registrada para rentar espacios')) {
+    return 'Esta cuenta está configurada para rentar espacios. Usa una cuenta de cliente para enviar una solicitud.';
+  }
+  if (reason.includes('inicia sesión') || reason.includes('jwt') || error.code === '42501') {
+    return 'Tu sesión necesita actualizarse. Cierra sesión, vuelve a entrar y envía la solicitud de nuevo.';
+  }
+  if (reason.includes('espacio') && (reason.includes('real') || reason.includes('publicado') || reason.includes('disponible'))) {
+    return 'Este espacio ya no acepta solicitudes. Actualiza el catálogo y elige otro disponible.';
+  }
+  return 'No pudimos crear la solicitud. Actualiza la aplicación e inténtalo de nuevo.';
+}
+
 function AppContent() {
   const [screen, setScreen] = useState<Screen>(() => isAdminPortalPath() ? 'auth' : 'welcome');
   const [tab, setTab] = useState<Tab>('Inicio');
@@ -507,13 +530,7 @@ function AppContent() {
     if (!user) { setPendingBooking(true); setAuthNotice('Inicia sesión para enviar y consultar tus solicitudes.'); setScreen('auth'); return; }
     const { data, error } = await supabase.from('bookings').insert({ client_id: user.id, space_id: selected.id, local_date: selectedDate, local_time: selectedTime, unit, quantity }).select('*').single();
     if (error) {
-      const reason = error.message.toLocaleLowerCase('es-MX');
-      const message = reason.includes('horario') || reason.includes('disponible')
-        ? 'Ese horario acaba de ocuparse. Elige otra fecha u hora.'
-        : reason.includes('cerrado')
-          ? 'El espacio no abre en ese horario. Elige otro.'
-          : 'Revisa tu conexión e inténtalo de nuevo.';
-      showMessage('No se pudo enviar la solicitud', message);
+      showMessage('No se pudo enviar la solicitud', bookingSubmissionMessage(error));
       return;
     }
     const booking = mapBooking(data as BookingRow);
