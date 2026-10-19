@@ -8,7 +8,7 @@ type OfiGoogleAuthPlugin = {
 
 const OfiGoogleAuth = registerPlugin<OfiGoogleAuthPlugin>('OficiaGoogleAuth');
 
-export async function signInWithGoogle(): Promise<boolean> {
+export async function signInWithGoogle(redirectTo?: string): Promise<boolean> {
   if (!supabase) throw new Error('El acceso con Google requiere conexión a Supabase.');
   if (Capacitor.isNativePlatform()) {
     const webClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID ?? import.meta.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -23,7 +23,7 @@ export async function signInWithGoogle(): Promise<boolean> {
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin },
+    options: { redirectTo: redirectTo ?? window.location.origin },
   });
   if (error) throw error;
   return true;

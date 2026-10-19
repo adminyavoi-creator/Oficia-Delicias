@@ -29,16 +29,17 @@ import { NotificationSettings } from './src/components/NotificationSettings';
 import { BookingConversation } from './src/components/BookingConversation';
 import { BookingWorkflowModal } from './src/components/BookingWorkflowModal';
 
-type Screen = 'welcome' | 'tabs' | 'detail' | 'booking' | 'receipt' | 'host' | 'operations' | 'auth' | 'chooseRole' | 'owner';
+type Screen = 'welcome' | 'tabs' | 'detail' | 'booking' | 'receipt' | 'host' | 'operations' | 'auth' | 'chooseRole' | 'owner' | 'adminDenied';
 type DetailSection = 'Acerca de' | 'Galería' | 'Opiniones';
 type SortMode = 'recommended' | 'price' | 'capacity';
+const isAdminPortalPath = () => typeof window !== 'undefined' && /^\/admin\/?$/.test(window.location.pathname);
 const times = ['08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '16:00', '18:00'];
 const tabItems: { label: Tab; icon: IconName }[] = [
   { label: 'Inicio', icon: 'home' }, { label: 'Explorar', icon: 'explore' }, { label: 'Favoritos', icon: 'heart' }, { label: 'Reservas', icon: 'calendar' }, { label: 'Perfil', icon: 'user' },
 ];
 
 function AppContent() {
-  const [screen, setScreen] = useState<Screen>('welcome');
+  const [screen, setScreen] = useState<Screen>(() => isAdminPortalPath() ? 'auth' : 'welcome');
   const [tab, setTab] = useState<Tab>('Inicio');
   const [category, setCategory] = useState<Category>('Todos');
   const [search, setSearch] = useState('');
@@ -137,7 +138,7 @@ function AppContent() {
     return matches;
   }, [catalog, category, search, capacityFilter, amenityFilter, sortMode]);
   const refreshRemoteData = async (userId: string) => {
-    if (!supabase) return;
+    if (!supabase) return false;
     const [hostResult, bookingResult, operatorResult] = await Promise.all([
       supabase.from('spaces').select('id').eq('host_id', userId),
       supabase.from('bookings').select('*').order('created_at', { ascending: false }),
@@ -159,6 +160,7 @@ function AppContent() {
     setHostSpaceIds(ownHostIds);
     setIsOperations(operator);
     setBookings(visibleBookings.map(row => mapBooking(row as BookingRow)));
+    return operator;
   };
   useEffect(() => {
     if (!supabase || accountType !== 'cliente' || !user?.id) return;
@@ -172,6 +174,28 @@ function AppContent() {
   const resolveProfile = async (signedUser: User) => {
     if (!supabase) return;
     const client = supabase;
+    if (isAdminPortalPath()) {
+      const access = await client.rpc('is_oficia_operations');
+      if (access.error) throw access.error;
+      if (access.data !== true) {
+        setAccountType(null);
+        setIsOperations(false);
+        setScreen('adminDenied');
+        return;
+      }
+      const stillAuthorized = await refreshRemoteData(signedUser.id);
+      if (!stillAuthorized) {
+        setAccountType(null);
+        setIsOperations(false);
+        setScreen('adminDenied');
+        return;
+      }
+      setAuthBusy(false);
+      setAuthPassword('');
+      setAuthNotice('');
+      setScreen('operations');
+      return;
+    }
     const savedChoice = await AsyncStorage.getItem('oficia:pending-account-type');
     const role = await ensureAccountType(
       async () => { const result = await client.from('oficia_profiles').select('account_type').eq('user_id', signedUser.id).maybeSingle(); if (result.error) throw result.error; return result.data?.account_type ?? null; },
@@ -262,11 +286,18 @@ function AppContent() {
           setAuthMode('nueva'); setAuthBusy(false); setScreen('auth'); setAuthReady(true);
           return;
         }
-        if (!session) setScreen('chooseRole');
+        if (!session) setScreen(isAdminPortalPath() ? 'auth' : 'chooseRole');
         if (error) setAuthNotice('No pudimos validar tu sesión. Inicia sesión para continuar.');
-        if (session) await resolveProfile(session.user).catch(() => { if (active) setScreen('chooseRole'); });
+        if (session) await resolveProfile(session.user).catch(() => {
+          if (!active) return;
+          if (isAdminPortalPath()) {
+            setAuthBusy(false);
+            setAuthNotice('No pudimos validar el acceso administrativo. Inténtalo de nuevo.');
+            setScreen('auth');
+          } else setScreen('chooseRole');
+        });
         if (active) setAuthReady(true);
-      }).catch(() => { if (active) { setAuthReady(true); setScreen('chooseRole'); setAuthNotice('No pudimos validar tu sesión. Inicia sesión para continuar.'); } });
+      }).catch(() => { if (active) { setAuthReady(true); setScreen(isAdminPortalPath() ? 'auth' : 'chooseRole'); setAuthNotice('No pudimos validar tu sesión. Inicia sesión para continuar.'); } });
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session: Session | null) => {
         if (_event === 'INITIAL_SESSION') return;
         setUser(session?.user ?? null);
@@ -278,11 +309,19 @@ function AppContent() {
         if (session) {
           if (_event === 'SIGNED_IN' || _event === 'USER_UPDATED') {
             // Evita llamar a la API de Auth dentro del callback de Auth.
-            if (!passwordRecoveryFlow.current) setTimeout(() => { resolveProfile(session.user).catch(() => setScreen('chooseRole')); }, 0);
+            if (!passwordRecoveryFlow.current) setTimeout(() => {
+              resolveProfile(session.user).catch(() => {
+                if (isAdminPortalPath()) {
+                  setAuthBusy(false);
+                  setAuthNotice('No pudimos validar el acceso administrativo. Inténtalo de nuevo.');
+                  setScreen('auth');
+                } else setScreen('chooseRole');
+              });
+            }, 0);
           }
         } else {
           setBookings([]); setReservationsLoadError(false); setHostSpaceIds([]); setIsOperations(false); setReviewDrafts([]); setLatestBooking(null); setAccountType(null);
-          if (backendConfigured && _event === 'SIGNED_OUT') { setPendingBooking(false); setScreen('chooseRole'); }
+          if (backendConfigured && _event === 'SIGNED_OUT') { setPendingBooking(false); setScreen(isAdminPortalPath() ? 'auth' : 'chooseRole'); }
         }
       });
       return () => { active = false; subscription.unsubscribe(); };
@@ -567,7 +606,8 @@ function AppContent() {
   const submitGoogleAuth = async () => {
     setAuthBusy(true); setAuthNotice('');
     try {
-      const signedIn = await signInWithGoogle();
+      const redirectTo = isAdminPortalPath() ? `${window.location.origin}/admin/` : undefined;
+      const signedIn = await signInWithGoogle(redirectTo);
       if (!signedIn) setAuthBusy(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
@@ -591,7 +631,7 @@ function AppContent() {
     if (error) { showMessage('No se pudo cerrar sesión', 'Revisa tu conexión e inténtalo de nuevo.'); return; }
     await AsyncStorage.removeItem('oficia:pending-account-type');
     setUser(null); setAccountType(null);
-    setPendingAccountType(null); setPendingBooking(false); setAuthMode('entrar'); setAuthNotice(''); setScreen('chooseRole');
+    setPendingAccountType(null); setPendingBooking(false); setAuthMode('entrar'); setAuthNotice(''); setScreen(isAdminPortalPath() ? 'auth' : 'chooseRole');
   };
 
   const slotReasonFor = (date: string, time: string, chosenUnit = unit, chosenQuantity = quantity) => selected
@@ -599,7 +639,7 @@ function AppContent() {
     : 'Elige un espacio';
   const selectedSlotReason = slotReasonFor(selectedDate, selectedTime);
   if (!hydrated || (backendConfigured && !authReady)) return <SafeAreaView style={styles.root} edges={['top', 'bottom']}><View style={styles.loading}><Mark size={70} /><Text style={styles.loadingText}>Preparando Oficia…</Text></View></SafeAreaView>;
-  return <SafeAreaView style={[styles.root, (screen === 'auth' || screen === 'chooseRole') && styles.authScreen]} edges={['top', 'bottom']}><StatusBar barStyle={screen === 'auth' || screen === 'chooseRole' ? 'light-content' : 'dark-content'} backgroundColor={screen === 'auth' || screen === 'chooseRole' ? palette.plum : palette.cream} />
+  return <SafeAreaView style={[styles.root, (screen === 'auth' || screen === 'chooseRole') && styles.authScreen, screen === 'operations' && isAdminPortalPath() && styles.adminRoot]} edges={['top', 'bottom']}><StatusBar barStyle={screen === 'auth' || screen === 'chooseRole' ? 'light-content' : 'dark-content'} backgroundColor={screen === 'auth' || screen === 'chooseRole' ? palette.plum : palette.cream} />
     {screen === 'chooseRole' && <RoleChoice signedIn={Boolean(user)} accountLabel={user ? profileDisplayName(user) : undefined} accountEmail={user?.email ?? undefined} accountType={accountType} onContinue={() => { void continueSignedIn(); }} onChoose={role => { void chooseAccountType(role); }} onSignIn={() => { void AsyncStorage.removeItem('oficia:pending-account-type'); setPendingAccountType(null); setAuthMode('entrar'); setAuthNotice(''); setScreen('auth'); }} />}
       {screen === 'owner' && user && accountType === 'anfitrion' && <OwnerDashboard userId={user.id} email={user.email ?? 'Cuenta Oficia'} profileName={profileDisplayName(user)} avatarUrl={profileAvatarUrl(user)} onSaveProfile={saveProfile} isOperations={isOperations} onOpenOperations={() => { setOperationsNotice(''); setScreen('operations'); void refreshRemoteData(user.id).catch(() => {}); }} onSignOut={() => { void confirmSignOut(); }} onRequestNotifications={async () => (await enablePushForUser(user.id, handlePushOpen, handleForegroundPush)).status === 'granted'} focusBookingId={focusBookingId} />}
     {screen === 'auth' && <View style={styles.authScreen}>
@@ -614,9 +654,9 @@ function AppContent() {
         <View style={styles.authBenefits}><View style={styles.authBenefit}><Icon name="wifi" size={15} color={palette.white} /><Text style={styles.authBenefitText}>Internet</Text></View><View style={styles.authBenefit}><Icon name="lock" size={15} color={palette.white} /><Text style={styles.authBenefitText}>Privacidad</Text></View><View style={styles.authBenefit}><Icon name="clock" size={15} color={palette.white} /><Text style={styles.authBenefitText}>A tu hora</Text></View></View>
       </View>
       <View style={[styles.authCard, styles.authCardResponsive]}>
-        <Text style={styles.authCardEyebrow}>{authMode === 'entrar' ? 'QUÉ BUENO VERTE' : authMode === 'crear' ? pendingAccountType === 'anfitrion' ? 'RENTO ESPACIO' : 'BUSCO ESPACIO' : authMode === 'recuperar' ? 'RECUPERA TU CUENTA' : 'SEGURIDAD DE TU CUENTA'}</Text>
-        <Text style={styles.authCardTitle}>{authMode === 'entrar' ? 'Inicia sesión' : authMode === 'crear' ? 'Crea tu cuenta' : authMode === 'recuperar' ? 'Recupera tu acceso' : 'Crea una contraseña nueva'}</Text>
-        <Text style={styles.authCardSubtitle}>{authMode === 'entrar' ? 'Tu espacio y tus planes, siempre a la mano.' : authMode === 'crear' ? pendingAccountType === 'anfitrion' ? 'Administra tus espacios y consulta tus ingresos.' : 'Guarda tus espacios y consulta tus solicitudes.' : authMode === 'recuperar' ? 'Te enviaremos un enlace seguro al correo de tu cuenta.' : 'Confirma la contraseña para proteger tu cuenta.'}</Text>
+        <Text style={styles.authCardEyebrow}>{isAdminPortalPath() ? 'CENTRO DE OPERACIONES' : authMode === 'entrar' ? 'QUÉ BUENO VERTE' : authMode === 'crear' ? pendingAccountType === 'anfitrion' ? 'RENTO ESPACIO' : 'BUSCO ESPACIO' : authMode === 'recuperar' ? 'RECUPERA TU CUENTA' : 'SEGURIDAD DE TU CUENTA'}</Text>
+        <Text style={styles.authCardTitle}>{isAdminPortalPath() ? 'Acceso administrativo' : authMode === 'entrar' ? 'Inicia sesión' : authMode === 'crear' ? 'Crea tu cuenta' : authMode === 'recuperar' ? 'Recupera tu acceso' : 'Crea una contraseña nueva'}</Text>
+        <Text style={styles.authCardSubtitle}>{isAdminPortalPath() ? 'Entra con una cuenta autorizada de Operaciones.' : authMode === 'entrar' ? 'Tu espacio y tus planes, siempre a la mano.' : authMode === 'crear' ? pendingAccountType === 'anfitrion' ? 'Administra tus espacios y consulta tus ingresos.' : 'Guarda tus espacios y consulta tus solicitudes.' : authMode === 'recuperar' ? 'Te enviaremos un enlace seguro al correo de tu cuenta.' : 'Confirma la contraseña para proteger tu cuenta.'}</Text>
         {backendConfigured && (authMode === 'entrar' || authMode === 'crear') ? <><Pressable accessibilityRole="button" accessibilityLabel="Continuar con Google" disabled={authBusy} onPress={submitGoogleAuth} style={[styles.googleButton, authBusy && styles.googleButtonDisabled]}><Text style={styles.googleMark}>G</Text><Text style={styles.googleButtonText}>{authBusy ? 'Conectando…' : 'Continuar con Google'}</Text></Pressable><View style={styles.authDivider}><View style={styles.authDividerLine} /><Text style={styles.authDividerText}>o con tu correo</Text><View style={styles.authDividerLine} /></View></> : null}
         <Text style={styles.authLabel}>Correo electrónico</Text>
         <View style={styles.authInputRow}><Icon name="user" size={18} color={palette.muted} /><TextInput autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" value={authEmail} onChangeText={setAuthEmail} placeholder="tu@correo.com" placeholderTextColor="#9B8990" style={styles.authInputField} returnKeyType="next" /></View>
@@ -628,8 +668,8 @@ function AppContent() {
         </> : null}
         <PrimaryButton label={authBusy ? 'Un momento…' : authMode === 'entrar' ? 'Iniciar sesión' : authMode === 'crear' ? 'Crear cuenta' : authMode === 'recuperar' ? 'Enviar enlace' : 'Guardar contraseña'} onPress={authMode === 'recuperar' ? requestPasswordReset : authMode === 'nueva' ? saveNewPassword : submitAuth} disabled={authBusy} style={{ marginTop: 20 }} />
         {authNotice ? <Text accessibilityRole="alert" style={styles.authNotice}>{authNotice}</Text> : null}
-        <Pressable accessibilityRole="button" onPress={() => { if (authMode === 'entrar') setScreen('chooseRole'); else { if (authMode === 'crear') { void AsyncStorage.removeItem('oficia:pending-account-type'); setPendingAccountType(null); } if (authMode === 'nueva') passwordRecoveryFlow.current = false; setAuthPassword(''); setAuthPasswordConfirm(''); setAuthMode('entrar'); } setAuthNotice(''); }} style={styles.authSwitch}><Text style={styles.authSwitchText}>{authMode === 'entrar' ? '¿Primera vez en Oficia? Elige tu perfil' : authMode === 'crear' ? '¿Ya tienes cuenta? Inicia sesión' : 'Volver a iniciar sesión'}</Text></Pressable>
-        {authMode === 'entrar' || authMode === 'crear' ? <View style={styles.authPrivacy}><Icon name="lock" size={14} color={palette.action} /><Text style={styles.authFootnote}>{pendingAccountType === 'anfitrion' && authMode === 'crear' ? 'Tus espacios quedan vinculados a tu cuenta. El perfil no se puede cambiar después.' : 'Tus solicitudes quedan vinculadas a tu cuenta. No se realizan cobros desde la app.'}</Text></View> : null}
+        {isAdminPortalPath() ? <Pressable accessibilityRole="link" onPress={() => window.location.assign('/')} style={styles.authSwitch}><Text style={styles.authSwitchText}>Volver a Oficia</Text></Pressable> : <Pressable accessibilityRole="button" onPress={() => { if (authMode === 'entrar') setScreen('chooseRole'); else { if (authMode === 'crear') { void AsyncStorage.removeItem('oficia:pending-account-type'); setPendingAccountType(null); } if (authMode === 'nueva') passwordRecoveryFlow.current = false; setAuthPassword(''); setAuthPasswordConfirm(''); setAuthMode('entrar'); } setAuthNotice(''); }} style={styles.authSwitch}><Text style={styles.authSwitchText}>{authMode === 'entrar' ? '¿Primera vez en Oficia? Elige tu perfil' : authMode === 'crear' ? '¿Ya tienes cuenta? Inicia sesión' : 'Volver a iniciar sesión'}</Text></Pressable>}
+        {!isAdminPortalPath() && (authMode === 'entrar' || authMode === 'crear') ? <View style={styles.authPrivacy}><Icon name="lock" size={14} color={palette.action} /><Text style={styles.authFootnote}>{pendingAccountType === 'anfitrion' && authMode === 'crear' ? 'Tus espacios quedan vinculados a tu cuenta. El perfil no se puede cambiar después.' : 'Tus solicitudes quedan vinculadas a tu cuenta. No se realizan cobros desde la app.'}</Text></View> : null}
       </View>
       <View style={styles.authFooter}><Text style={styles.authFooterText}>Encuentra tu espacio. Enfócate en lo que sigue.</Text></View>
       </ScrollView>
@@ -675,7 +715,12 @@ function AppContent() {
 
     {screen === 'host' && <ScrollView style={styles.flex} contentContainerStyle={styles.hostContent}><View style={styles.innerHeader}><Pressable accessibilityRole="button" accessibilityLabel="Volver a perfil" onPress={goBack} style={styles.roundBack}><Icon name="back" size={19} /></Pressable><Text style={styles.innerHeaderTitle}>Panel de anfitrión</Text><View style={{ width: 38 }} /></View><View style={styles.hostBanner}><Icon name="info" size={21} color={palette.action} /><Text style={styles.hostBannerText}>{backendConfigured ? 'Consulta las solicitudes de tus espacios. Oficia muestra tickets informativos y no procesa dinero.' : 'Vista de demostración. Las solicitudes se guardan en este dispositivo.'}</Text></View><Text style={styles.pageEyebrow}>RESUMEN</Text><Text style={styles.pageTitle}>Solicitudes</Text><View style={styles.hostStats}><View style={styles.hostStat}><Text style={styles.hostStatNumber}>{hostBookings.filter(item => item.status === 'Solicitud enviada').length}</Text><Text style={styles.hostStatLabel}>Pendientes</Text></View><View style={styles.hostStat}><Text style={styles.hostStatNumber}>{hostBookings.filter(item => item.status === 'Confirmada').length}</Text><Text style={styles.hostStatLabel}>Autorizadas</Text></View><View style={styles.hostStat}><Text style={styles.hostStatNumber}>{hostBookings.length}</Text><Text style={styles.hostStatLabel}>Total</Text></View></View>{hostBookings.length ? hostBookings.map(booking => { const space = catalog.find(item => item.id === booking.spaceId); if (!space) return null; return <View key={booking.id} style={styles.hostBooking}><View style={styles.hostBookingTop}><Text style={styles.hostBookingSpace}>{space.name}</Text><Text style={styles.hostBookingCode}>{booking.id}</Text></View><Text style={styles.hostBookingMeta}>{formatDate(booking.date)} · {booking.time}</Text><Text style={styles.hostBookingMeta}>{booking.quantity} {booking.unit === 'Hora' ? 'hora(s)' : booking.unit === 'Día' ? 'día(s)' : 'semana(s)'} · {formatMoney(booking.total)}</Text><Text style={styles.hostBookingStatus}>{booking.status}</Text><Text style={styles.hostBookingMeta}>Ticket informativo · sin cobro</Text></View>; }) : <EmptyState icon="calendar" title={backendConfigured && hostSpaceIds.length === 0 ? 'Aún no hay espacios vinculados' : 'Sin solicitudes todavía'} message={backendConfigured && hostSpaceIds.length === 0 ? 'La cuenta anfitriona debe asociarse a un espacio desde la administración de Oficia.' : 'Las nuevas solicitudes de tus espacios aparecerán aquí.'} action={backendConfigured && hostSpaceIds.length === 0 ? undefined : 'Explorar espacios'} onAction={() => chooseTab('Explorar')} />}</ScrollView>}
 
-    {screen === 'operations' && <ScrollView style={styles.flex} contentContainerStyle={styles.hostContent}>{operationsNotice ? <Text accessibilityRole="alert" style={styles.authNotice}>{operationsNotice}</Text> : null}<OperationsCenter userId={user?.id ?? ''} isOperations={isOperations} drafts={reviewDrafts} draftBusy={operationsBusy} refreshVersion={operationsRefreshVersion} onOpenWorkflow={bookingId => openBookingWorkflow(bookingId, 'operations')} onReviewDraft={(id, approve, reason) => { void reviewSpaceDraft(id, approve, reason); }} onChangeToOwner={() => setScreen('owner')} /></ScrollView>}
+    {screen === 'operations' && isAdminPortalPath() && isOperations && user ? <View style={styles.adminPortal}>
+      <View style={styles.adminPortalHeader}><View style={styles.adminPortalBrand}><Mark size={40} /><View><Text style={styles.adminPortalTitle}>Oficia</Text><Text style={styles.adminPortalEyebrow}>CENTRO DE OPERACIONES</Text></View></View><View style={styles.adminPortalAccount}><Text style={styles.adminPortalAccountLabel}>Sesión autorizada</Text><Text style={styles.adminPortalAccountEmail}>{user.email ?? 'Operaciones'}</Text></View><Pressable accessibilityRole="link" onPress={() => window.location.assign('/')} style={styles.adminPortalLink}><Text style={styles.adminPortalLinkText}>Abrir Oficia</Text></Pressable></View>
+      <ScrollView style={styles.flex} contentContainerStyle={[styles.hostContent, styles.adminPortalContent]}>{operationsNotice ? <Text accessibilityRole="alert" style={styles.authNotice}>{operationsNotice}</Text> : null}<OperationsCenter userId={user.id} isOperations={isOperations} drafts={reviewDrafts} draftBusy={operationsBusy} refreshVersion={operationsRefreshVersion} onOpenWorkflow={bookingId => openBookingWorkflow(bookingId, 'operations')} onReviewDraft={(id, approve, reason) => { void reviewSpaceDraft(id, approve, reason); }} onChangeToOwner={() => window.location.assign('/')} /></ScrollView>
+    </View> : null}
+    {screen === 'operations' && !isAdminPortalPath() && <ScrollView style={styles.flex} contentContainerStyle={styles.hostContent}>{operationsNotice ? <Text accessibilityRole="alert" style={styles.authNotice}>{operationsNotice}</Text> : null}<OperationsCenter userId={user?.id ?? ''} isOperations={isOperations} drafts={reviewDrafts} draftBusy={operationsBusy} refreshVersion={operationsRefreshVersion} onOpenWorkflow={bookingId => openBookingWorkflow(bookingId, 'operations')} onReviewDraft={(id, approve, reason) => { void reviewSpaceDraft(id, approve, reason); }} onChangeToOwner={() => setScreen('owner')} /></ScrollView>}
+    {screen === 'adminDenied' && <View style={styles.adminDenied}><Mark size={62} /><Text style={styles.adminDeniedTitle}>Acceso restringido</Text><Text style={styles.adminDeniedCopy}>Esta cuenta no tiene permisos para el Centro de Operaciones.</Text><Pressable accessibilityRole="button" onPress={() => { void confirmSignOut(); }} style={styles.adminPortalLink}><Text style={styles.adminPortalLinkText}>Cambiar cuenta</Text></Pressable><Pressable accessibilityRole="link" onPress={() => window.location.assign('/')} style={styles.authSwitch}><Text style={styles.authSwitchText}>Volver a Oficia</Text></Pressable></View>}
 
     {bookingWorkflowVisible && bookingWorkflow && user ? <BookingWorkflowModal visible={bookingWorkflowVisible} bookingId={bookingWorkflow.bookingId} userId={user.id} mode={bookingWorkflow.mode} onClose={() => setBookingWorkflowVisible(false)} onChanged={() => {
       if (bookingWorkflow.mode === 'operations') setOperationsRefreshVersion(value => value + 1);
@@ -769,7 +814,7 @@ const authScreenStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   ...authScreenStyles,
   authContent: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 15, paddingBottom: 35 }, authCard: { backgroundColor: 'rgba(255, 249, 248, 0.96)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.62)', borderRadius: 23, padding: 22, marginTop: 20 }, authLabel: { color: palette.plum, fontSize: 12, fontWeight: '800', marginTop: 20, marginBottom: 8 }, authInput: { height: 50, borderRadius: 13, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.cream, paddingHorizontal: 14, color: palette.plum, fontSize: 14 }, googleButton: { height: 52, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.white, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 11, marginTop: 23 }, googleButtonDisabled: { opacity: .58 }, googleMark: { color: '#4285F4', fontSize: 19, fontWeight: '900' }, googleButtonText: { color: palette.plum, fontSize: 13, fontWeight: '800' }, authDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 19 }, authDividerLine: { flex: 1, height: 1, backgroundColor: palette.line }, authDividerText: { color: palette.muted, fontSize: 10 }, authNotice: { color: palette.action, fontSize: 12, lineHeight: 18, marginTop: 15 }, authSwitch: { alignItems: 'center', paddingVertical: 17, marginTop: 5 }, authForgot: { alignSelf: 'flex-end', paddingTop: 12, paddingBottom: 3 }, authSwitchText: { color: palette.action, fontSize: 12, fontWeight: '800', textAlign: 'center' }, authFootnote: { color: palette.muted, fontSize: 10, textAlign: 'center', lineHeight: 16 },
-  root: { flex: 1, backgroundColor: palette.cream }, flex: { flex: 1 }, screenContent: { paddingBottom: 25 }, padded: { paddingHorizontal: 20 },
+  root: { flex: 1, backgroundColor: palette.cream }, adminRoot: { backgroundColor: palette.cream }, adminPortal: { flex: 1, width: '100%', alignSelf: 'center', maxWidth: 1440 }, adminPortalHeader: { minHeight: 76, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 18, paddingHorizontal: 28, paddingVertical: 14, backgroundColor: palette.white, borderBottomWidth: 1, borderBottomColor: palette.line }, adminPortalBrand: { flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 'auto' }, adminPortalTitle: { color: palette.plum, fontSize: 20, fontWeight: '900' }, adminPortalEyebrow: { color: palette.action, fontSize: 9, letterSpacing: 1.5, fontWeight: '900', marginTop: 2 }, adminPortalAccount: { paddingHorizontal: 10 }, adminPortalAccountLabel: { color: palette.muted, fontSize: 10 }, adminPortalAccountEmail: { color: palette.plum, fontSize: 12, fontWeight: '800', marginTop: 3 }, adminPortalLink: { borderRadius: 12, backgroundColor: palette.action, paddingHorizontal: 15, paddingVertical: 11 }, adminPortalLinkText: { color: palette.white, fontSize: 12, fontWeight: '900' }, adminPortalContent: { width: '100%', maxWidth: 1180, alignSelf: 'center', paddingTop: 22 }, adminDenied: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }, adminDeniedTitle: { color: palette.plum, fontSize: 24, fontWeight: '900' }, adminDeniedCopy: { maxWidth: 360, color: palette.muted, textAlign: 'center', fontSize: 14, lineHeight: 21 }, flex: { flex: 1 }, screenContent: { paddingBottom: 25 }, padded: { paddingHorizontal: 20 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 13 }, loadingText: { color: palette.plum, fontSize: 14, fontWeight: '800' },
   exploreFilter: { marginLeft: 12, padding: 6 }, filterDot: { position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: 4, backgroundColor: palette.action },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#35272C60' }, modalScrim: { flex: 1 }, filterPanel: { backgroundColor: palette.white, borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 22 }, filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, filterTitle: { color: palette.plum, fontSize: 21, fontWeight: '900' }, filterLabel: { color: palette.plum, fontSize: 14, fontWeight: '900', marginTop: 24, marginBottom: 12 }, filterOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, filterOption: { backgroundColor: palette.cream, borderColor: palette.line, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 10, borderRadius: 11 }, filterOptionActive: { backgroundColor: palette.action, borderColor: palette.action }, filterOptionText: { color: palette.plum, fontSize: 11, fontWeight: '700' }, filterOptionTextActive: { color: palette.white }, filterActions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 30 }, clearFilters: { paddingHorizontal: 17, height: 52, justifyContent: 'center' }, clearFiltersText: { color: palette.action, fontSize: 13, fontWeight: '900' },
